@@ -308,8 +308,9 @@
         <div class="navbar-actions">
             <button class="btn btn-s" onclick="mostrarVista('register-view')" title="Registro General">📝 Registrarse</button>
             <button class="btn btn-w" onclick="mostrarVista('parent-view')" title="Consulta directa en el sistema">🔍 Consulta</button>
-            <button class="btn btn-i" onclick="abrirLogin('escaner')" title="Acceso al escáner">📷 Escáner Facial</button>
+            <button class="btn btn-i" onclick="iniciarEscaneoDirecto()" title="Acceso al escáner">📷 Escáner Facial</button>
             <button class="btn btn-m" onclick="abrirLogin('admin')" title="Panel administrativo">🔓 Admin</button>
+            <button id="btnSalir" class="btn btn-d" onclick="cerrarSesion()" title="Cerrar sesión" style="display:none;">🚪 Salir</button>
         </div>
     </div>
 
@@ -326,12 +327,37 @@
             <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 20px;">
                 Ingrese sus credenciales autorizadas.
             </p>
-            <input type="email" id="loginEmail" placeholder="Correo electrónico" required>
-            <input type="password" id="loginPass" placeholder="Contraseña" required>
             
-            <div class="btn-group">
-                <button class="btn btn-m" style="flex:2;" onclick="procesarLogin()">Ingresar al Sistema</button>
-                <button class="btn btn-d" style="flex:1;" onclick="cerrarLogin()">Cancelar</button>
+            <!-- Sección de Login -->
+            <div id="login-section">
+                <input type="email" id="loginEmail" placeholder="Correo electrónico" required>
+                <input type="password" id="loginPass" placeholder="Contraseña" required>
+                
+                <div class="btn-group">
+                    <button class="btn btn-m" style="flex:2;" onclick="procesarLogin()">Ingresar al Sistema</button>
+                    <button class="btn btn-d" style="flex:1;" onclick="cerrarLogin()">Cancelar</button>
+                </div>
+                
+                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.85rem;">
+                    ¿No tienes cuenta? <a href="#" onclick="mostrarRegistroDirector()" style="color: var(--accent-primary);">Regístrate aquí</a>
+                </p>
+            </div>
+            
+            <!-- Sección de Registro -->
+            <div id="registro-section" style="display: none;">
+                <h3>📝 Registro de Director</h3>
+                <input type="text" id="regNombreEscuela" placeholder="Nombre de la Escuela" required>
+                <input type="email" id="regEmail" placeholder="Correo electrónico" required>
+                <input type="password" id="regPass" placeholder="Contraseña" required>
+                
+                <div class="btn-group">
+                    <button class="btn btn-s" style="flex:2;" onclick="procesarRegistroDirector()">Registrar</button>
+                    <button class="btn btn-d" style="flex:1;" onclick="mostrarLoginDirector()">Cancelar</button>
+                </div>
+                
+                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.85rem;">
+                    ¿Ya tienes cuenta? <a href="#" onclick="mostrarLoginDirector()" style="color: var(--accent-primary);">Inicia sesión aquí</a>
+                </p>
             </div>
         </div>
     </div>
@@ -601,14 +627,14 @@
         let NUMERO_OFICIAL_JUNTA = "88888888"; 
         
         const firebaseConfig = {
-            apiKey: "AIzaSyBpGu9Bnr5pQhNBK4kYpoh4GuLkR4CED4c",
-            authDomain: "escuela-la-carpio.firebaseapp.com",
-            databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com",
-            projectId: "escuela-la-carpio",
-            storageBucket: "escuela-la-carpio.firebasestorage.app",
-            messagingSenderId: "163331007154",
-            appId: "1:163331007154:web:2465b1068d6b356cbadfab",
-            measurementId: "G-8EBFX04XVC"
+            apiKey: "AIzaSyBSGIsqoZlZIedWlvNwVnhYrZI0LBherz0",
+            authDomain: "multiasistencia-e4d34.firebaseapp.com",
+            databaseURL: "https://multiasistencia-e4d34-default-rtdb.firebaseio.com",
+            projectId: "multiasistencia-e4d34",
+            storageBucket: "multiasistencia-e4d34.firebasestorage.app",
+            messagingSenderId: "583512920398",
+            appId: "1:583512920398:web:57c98e146ff88e63a08e1f",
+            measurementId: "G-YR8DZLVE0K"
         };
         
         if (!firebase.apps.length) {
@@ -616,12 +642,21 @@
         }
         const database = firebase.database();
 
+        // Variables globales actualizadas
+        let currentUserUID = null;
+        let currentSchoolName = null;
         let db = { personas: {} };
         let logsGlobal = [];
         let logsLejanosGlobal = [];
 
         // Parámetros geocerca por defecto
         let geoConfig = { lat: 9.9388, lng: -84.1200, radio: 150 };
+
+        // Función para obtener la ruta de datos del usuario actual
+        function getUserPath() {
+            if (!currentUserUID) return null;
+            return `directores/${currentUserUID}`;
+        }
 
         document.getElementById('reportDate').value = new Date().toLocaleDateString('sv-SE');
         
@@ -641,21 +676,29 @@
             document.body.classList.add('light-theme');
         }
 
-        // Cargar imagen de fondo y logo si existen
-        if(localStorage.getItem('CUSTOM_BG')) {
-            document.body.style.backgroundImage = `url(${localStorage.getItem('CUSTOM_BG')})`;
+        // Cargar imagen de fondo y logo si existen (con prefijo de UID)
+        function cargarFondoPersonalizado() {
+            if (currentUserUID) {
+                const bgKey = `CUSTOM_BG_${currentUserUID}`;
+                const bgBase64 = localStorage.getItem(bgKey);
+                if (bgBase64) {
+                    document.body.style.backgroundImage = `url(${bgBase64})`;
+                }
+            }
         }
         
         function cargarLogoPersonalizado() {
-            const logoBase64 = localStorage.getItem('CUSTOM_LOGO');
-            const navContainer = document.getElementById('nav-logo-container');
-            if(logoBase64) {
-                navContainer.innerHTML = `<img src="${logoBase64}" alt="Logo Oficial">`;
-            } else {
-                navContainer.innerHTML = `🤖 Asistencia IA`;
+            if (currentUserUID) {
+                const logoKey = `CUSTOM_LOGO_${currentUserUID}`;
+                const logoBase64 = localStorage.getItem(logoKey);
+                const navContainer = document.getElementById('nav-logo-container');
+                if (logoBase64) {
+                    navContainer.innerHTML = `<img src="${logoBase64}" alt="Logo Oficial">`;
+                } else {
+                    navContainer.innerHTML = `🤖 Asistencia IA`;
+                }
             }
         }
-        cargarLogoPersonalizado();
 
         // ============================================
         // SISTEMA DE INICIO DE SESIÓN SEGURO (FIREBASE AUTH)
@@ -673,17 +716,25 @@
 
             if (tipo === 'admin') {
                 title.innerHTML = "🔓 Panel de Administrador";
-                emailInput.value = "juntacarpio@mep.com"; // Autocompletar Admin
-            } else if (tipo === 'escaner') {
-                title.innerHTML = "📷 Escáner de Asistencia";
-                emailInput.value = "juntaIA@mep.com"; // Autocompletar Escáner
+                emailInput.value = ""; // No autocompletar para directores
             }
 
             modal.style.display = 'flex';
+            mostrarLoginDirector(); // Mostrar sección de login por defecto
         }
 
         function cerrarLogin() {
             document.getElementById('login-modal').style.display = 'none';
+        }
+
+        function mostrarLoginDirector() {
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('registro-section').style.display = 'none';
+        }
+
+        function mostrarRegistroDirector() {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('registro-section').style.display = 'block';
         }
 
         function procesarLogin() {
@@ -697,18 +748,140 @@
 
             firebase.auth().signInWithEmailAndPassword(email, pass)
                 .then((userCredential) => {
-                    cerrarLogin();
-                    if (contextoLogin === 'admin') {
-                        document.getElementById('master-panel').style.display = 'block';
-                        inicializarIA();
-                        resetIdleTimer();
-                    } else if (contextoLogin === 'escaner') {
-                        mostrarVista('scan-view');
-                    }
+                    const user = userCredential.user;
+                    currentUserUID = user.uid;
+                    
+                    // Obtener nombre de la escuela
+                    database.ref(`directores/${currentUserUID}/nombreEscuela`).once('value')
+                        .then(snapshot => {
+                            currentSchoolName = snapshot.val() || "Escuela Sin Nombre";
+                            document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
+                            cargarFondoPersonalizado();
+                            cargarLogoPersonalizado();
+                            document.getElementById('btnSalir').style.display = 'inline-block';
+                            cerrarLogin();
+                            
+                            if (contextoLogin === 'admin') {
+                                attachUserListeners();
+                                document.getElementById('master-panel').style.display = 'block';
+                                inicializarIA();
+                                resetIdleTimer();
+                            }
+                        });
                 })
                 .catch((error) => {
                     alert("Acceso Denegado. Contraseña o correo incorrectos.\n\n" + error.message);
                 });
+        }
+
+        function procesarRegistroDirector() {
+            const nombreEscuela = document.getElementById('regNombreEscuela').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value;
+
+            if (!nombreEscuela || !email || !pass) {
+                alert("Por favor, complete todos los campos.");
+                return;
+            }
+
+            firebase.auth().createUserWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    currentUserUID = user.uid;
+                    
+                    // Guardar información del director
+                    database.ref(`directores/${currentUserUID}`).set({
+                        nombreEscuela: nombreEscuela,
+                        email: email,
+                        fechaRegistro: new Date().toISOString()
+                    }).then(() => {
+                        currentSchoolName = nombreEscuela;
+                        document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
+                        document.getElementById('btnSalir').style.display = 'inline-block';
+                        cerrarLogin();
+                        alert("Registro exitoso. Bienvenido al sistema.");
+                    });
+                })
+                .catch((error) => {
+                    alert("Error en el registro: " + error.message);
+                });
+        }
+
+        function cerrarSesion() {
+            firebase.auth().signOut().then(() => {
+                currentUserUID = null;
+                currentSchoolName = null;
+                document.getElementById('nav-logo-container').innerHTML = "🤖 Asistencia IA";
+                document.getElementById('btnSalir').style.display = 'none';
+                
+                // Limpiar datos locales
+                db = { personas: {} };
+                logsGlobal = [];
+                logsLejanosGlobal = [];
+                renderAlumnos();
+                renderGeolocalizacion();
+                
+                // Limpiar localStorage personalizado
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('CUSTOM_LOGO_') || key.startsWith('CUSTOM_BG_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                mostrarVista('home-view');
+                alert("Sesión cerrada correctamente.");
+            });
+        }
+
+        // Listener de estado de autenticación
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                currentUserUID = user.uid;
+                database.ref(`directores/${currentUserUID}/nombreEscuela`).once('value')
+                    .then(snapshot => {
+                        currentSchoolName = snapshot.val() || "Escuela Sin Nombre";
+                        document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
+                        document.getElementById('btnSalir').style.display = 'inline-block';
+                        cargarFondoPersonalizado();
+                        cargarLogoPersonalizado();
+                        attachUserListeners();
+                        inicializarIA();
+                    });
+            } else {
+                currentUserUID = null;
+                currentSchoolName = null;
+                document.getElementById('btnSalir').style.display = 'none';
+                document.getElementById('nav-logo-container').innerHTML = "🤖 Asistencia IA";
+            }
+        });
+
+        // Función para adjuntar listeners específicos del usuario
+        function attachUserListeners() {
+            if (!currentUserUID) return;
+            
+            const userPath = getUserPath();
+            if (!userPath) return;
+            
+            // Listener personas
+            database.ref(`${userPath}/personas`).on('value', (s) => { 
+                db.personas = s.val() || {}; 
+                renderAlumnos(); 
+                construirFaceMatcher(); 
+            });
+            
+            // Listener logs
+            database.ref(`${userPath}/logs`).on('value', (s) => { 
+                logsGlobal = []; 
+                s.forEach(c => { let val = c.val(); val.key = c.key; logsGlobal.push(val); });
+                renderAlumnos(); 
+            });
+
+            // Listener logs_lejanos
+            database.ref(`${userPath}/logs_lejanos`).on('value', (s) => {
+                logsLejanosGlobal = [];
+                s.forEach(c => { let val = c.val(); val.key = c.key; logsLejanosGlobal.push(val); });
+                renderGeolocalizacion();
+            });
         }
 
         // ============================================
@@ -900,27 +1073,6 @@
         }
 
         // ============================================
-        // LÓGICA DE BASE DE DATOS BÁSICA
-        // ============================================
-        database.ref('personas').on('value', (s) => { 
-            db.personas = s.val() || {}; 
-            renderAlumnos(); 
-            construirFaceMatcher(); 
-        });
-        
-        database.ref('logs').on('value', (s) => { 
-            logsGlobal = []; 
-            s.forEach(c => { let val = c.val(); val.key = c.key; logsGlobal.push(val); });
-            renderAlumnos(); 
-        });
-
-        database.ref('logs_lejanos').on('value', (s) => {
-            logsLejanosGlobal = [];
-            s.forEach(c => { let val = c.val(); val.key = c.key; logsLejanosGlobal.push(val); });
-            renderGeolocalizacion();
-        });
-
-        // ============================================
         // REGISTRO DE USUARIOS (MULTI-PERFIL / FUSIÓN IA)
         // ============================================
         let regDescriptors = [];
@@ -1052,15 +1204,22 @@
                 descriptor: finalDescArray
             };
             
-            database.ref('personas/' + id).update(newUser);
+            const userPath = getUserPath();
+            if (userPath) {
+                database.ref(`${userPath}/personas/${id}`).update(newUser);
+            }
             
             if (rol === 'Padre/Encargado' && studentId) {
                 if (db.personas[studentId]) {
                     const stu = db.personas[studentId];
                     if (!stu.descriptorPadre1) {
-                        database.ref('personas/' + studentId + '/descriptorPadre1').set(finalDescArray);
+                        if (userPath) {
+                            database.ref(`${userPath}/personas/${studentId}/descriptorPadre1`).set(finalDescArray);
+                        }
                     } else {
-                        database.ref('personas/' + studentId + '/descriptorPadre2').set(finalDescArray);
+                        if (userPath) {
+                            database.ref(`${userPath}/personas/${studentId}/descriptorPadre2`).set(finalDescArray);
+                        }
                     }
                     alert(`✅ Registro exitoso.\n\nSe ha creado su perfil y además se ha enlazado automáticamente como encargado del estudiante con cédula ${studentId}.`);
                 } else {
@@ -1109,15 +1268,18 @@
                     const esLejano = dist > geoConfig.radio;
 
                     if (esLejano) {
-                        database.ref('logs_lejanos').push({
-                            id: id,
-                            nombre: db.personas[id]?.nombre || "Desconocido",
-                            hora: new Date().toLocaleString(),
-                            fechaISO: hISO,
-                            distancia: Math.round(dist),
-                            lat: latDisp,
-                            lng: lngDisp
-                        });
+                        const userPath = getUserPath();
+                        if (userPath) {
+                            database.ref(`${userPath}/logs_lejanos`).push({
+                                id: id,
+                                nombre: db.personas[id]?.nombre || "Desconocido",
+                                hora: new Date().toLocaleString(),
+                                fechaISO: hISO,
+                                distancia: Math.round(dist),
+                                lat: latDisp,
+                                lng: lngDisp
+                            });
+                        }
                         
                         mostrarMensajeTemp("⚠️ Fuera del rango. Escaneo detectado (" + Math.round(dist) + "m) pero NO registrado.", "var(--accent-danger)");
                         playErrorSound();
@@ -1150,17 +1312,20 @@
                 return; 
             }
             
-            database.ref('logs').push({ 
-                id: id, 
-                nombre: db.personas[id].nombre, 
-                hora: new Date().toLocaleString(), 
-                fechaISO: hISO, 
-                tipo: tipo,
-                lejano: esLejano,
-                distanciaMetros: esLejano ? Math.round(dist) : 0,
-                emocion: strEmocion,
-                emoticon: emoticon
-            });
+            const userPath = getUserPath();
+            if (userPath) {
+                database.ref(`${userPath}/logs`).push({ 
+                    id: id, 
+                    nombre: db.personas[id].nombre, 
+                    hora: new Date().toLocaleString(), 
+                    fechaISO: hISO, 
+                    tipo: tipo,
+                    lejano: esLejano,
+                    distanciaMetros: esLejano ? Math.round(dist) : 0,
+                    emocion: strEmocion,
+                    emoticon: emoticon
+                });
+            }
             
             playSuccessSound();
 
@@ -1424,14 +1589,20 @@
 
         function capturarYGuardarRostro() {
             if(idCapturaActual && descriptorDetectado) {
-                if (tipoCapturaActual === 'estudiante') {
-                    db.personas[idCapturaActual].descriptor = descriptorDetectado;
-                } else if (tipoCapturaActual === 'padre1') {
-                    db.personas[idCapturaActual].descriptorPadre1 = descriptorDetectado;
-                } else if (tipoCapturaActual === 'padre2') {
-                    db.personas[idCapturaActual].descriptorPadre2 = descriptorDetectado;
+                const userPath = getUserPath();
+                if (userPath) {
+                    if (tipoCapturaActual === 'estudiante') {
+                        db.personas[idCapturaActual].descriptor = descriptorDetectado;
+                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptor`).set(descriptorDetectado);
+                    } else if (tipoCapturaActual === 'padre1') {
+                        db.personas[idCapturaActual].descriptorPadre1 = descriptorDetectado;
+                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptorPadre1`).set(descriptorDetectado);
+                    } else if (tipoCapturaActual === 'padre2') {
+                        db.personas[idCapturaActual].descriptorPadre2 = descriptorDetectado;
+                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptorPadre2`).set(descriptorDetectado);
+                    }
                 }
-                sincronizarConNube(); alert("Rostro facial guardado exitosamente en la nube.");
+                alert("Rostro facial guardado exitosamente en la nube.");
                 cerrarFaceModal(); construirFaceMatcher();
             }
         }
@@ -1478,7 +1649,7 @@
                             <div style="display:flex; gap: 4px;">
                                 <button class="btn btn-s" style="padding:6px 10px;" onclick="enviarWA('${p.telefono || ''}')" title="WhatsApp">💬</button>
                                 <button class="btn btn-i" style="padding:6px 10px;" onclick="descargarCarnet('${id}')" title="Ver Carnet">📇</button>
-                                <button class="btn btn-d" style="padding:6px 10px;" onclick="if(confirm('¿Borrar usuario?')) { database.ref('personas/'+'${id}').remove(); }" title="Eliminar">🗑️</button>
+                                <button class="btn btn-d" style="padding:6px 10px;" onclick="if(confirm('¿Borrar usuario?')) { const userPath = getUserPath(); if (userPath) database.ref(userPath+'/personas/'+'${id}').remove(); }" title="Eliminar">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -1515,8 +1686,11 @@
 
         function eliminarLogLejano(key) {
             if(confirm("¿Está seguro de que desea eliminar permanentemente este registro de escaneo lejano?")) {
-                database.ref('logs_lejanos/' + key).remove();
-                alert("Registro lejano eliminado con éxito.");
+                const userPath = getUserPath();
+                if (userPath) {
+                    database.ref(`${userPath}/logs_lejanos/${key}`).remove();
+                    alert("Registro lejano eliminado con éxito.");
+                }
             }
         }
 
@@ -1540,8 +1714,11 @@
                     
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
                     try {
-                        localStorage.setItem('CUSTOM_BG', dataUrl);
-                        document.body.style.backgroundImage = `url(${dataUrl})`;
+                        if (currentUserUID) {
+                            const bgKey = `CUSTOM_BG_${currentUserUID}`;
+                            localStorage.setItem(bgKey, dataUrl);
+                            document.body.style.backgroundImage = `url(${dataUrl})`;
+                        }
                         alert('Fondo de pantalla actualizado con éxito desde su dispositivo.');
                     } catch(err) {
                         alert('La imagen es demasiado pesada para el navegador. Intente subir una foto de menor calidad.');
@@ -1569,8 +1746,11 @@
 
                     const dataUrl = canvas.toDataURL('image/png', 0.8);
                     try {
-                        localStorage.setItem('CUSTOM_LOGO', dataUrl);
-                        cargarLogoPersonalizado();
+                        if (currentUserUID) {
+                            const logoKey = `CUSTOM_LOGO_${currentUserUID}`;
+                            localStorage.setItem(logoKey, dataUrl);
+                            cargarLogoPersonalizado();
+                        }
                         alert('Logo institucional actualizado correctamente.');
                     } catch(err) {
                         alert('La imagen del logo excede el límite permitido. Intente con una imagen más liviana.');
@@ -1597,7 +1777,7 @@
                         <button class="btn btn-s" onclick="setTheme('light')">☀️ Modo Claro</button>
                     </div>
                     <hr style="margin: 15px 0;">
-                    <p><b>Institución:</b> Escuela La Carpio</p>
+                    <p><b>Institución:</b> ${currentSchoolName || 'Escuela La Carpio'}</p>
                     <p><b>Licencia:</b> prodigital-72284602</p>
                     <p><b>Versión:</b> Sistema Facial Inteligente 3.5 (SDD Architecture)</p>
                 </div>
@@ -1633,7 +1813,11 @@
                 return;
             }
             geoConfig = { lat, lng, radio };
-            database.ref('config/geocerca').set(geoConfig);
+            
+            const userPath = getUserPath();
+            if (userPath) {
+                database.ref(`${userPath}/config/geocerca`).set(geoConfig);
+            }
             alert("Ubicación y Geocerca configuradas de forma exitosa.\n\nRecuerde: Ahora cualquier escaneo que exceda el radio será almacenado en el 'Historial Lejano' y su Asistencia Oficial será rechazada.");
         }
 
@@ -1650,7 +1834,13 @@
                 renderAlumnos(); 
             } 
         }
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos guardados en la nube."); }
+        function sincronizarConNube() { 
+            const userPath = getUserPath();
+            if (userPath) {
+                database.ref(`${userPath}/personas`).set(db.personas); 
+                alert("Datos guardados en la nube.");
+            }
+        }
         
         function importarCSV() { 
             const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
@@ -1674,7 +1864,16 @@
             r.readAsText(f); 
         }
 
-        function exportarCSV() { let csv = 'Código,Nombre,Sección,WhatsApp,Rol\n'; Object.entries(db.personas).forEach(([id, p]) => { csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''},${p.tipoUsuario || 'Estudiante'}\n`; }); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = `Usuarios_Registrados_${new Date().toISOString().split('T')[0]}.csv`; link.click(); }
+        function exportarCSV() { 
+            let csv = 'Código,Nombre,Sección,WhatsApp,Rol\n'; 
+            Object.entries(db.personas).forEach(([id, p]) => { 
+                csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''},${p.tipoUsuario || 'Estudiante'}\n`; 
+            }); 
+            const link = document.createElement('a'); 
+            link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); 
+            link.download = `Usuarios_Registrados_${new Date().toISOString().split('T')[0]}.csv`; 
+            link.click(); 
+        }
         
         function exportarPDFMiembros() {
             const { jsPDF } = window.jspdf; 
@@ -1701,28 +1900,60 @@
             doc.save(`Usuarios_${new Date().toLocaleDateString('sv-SE')}.pdf`);
         }
         
-        function duplicarMiembro() { const id = prompt('Código a duplicar:'); if(id && db.personas[id]) { const newId = prompt('Nuevo código para el duplicado:'); if(newId) { db.personas[newId] = {...db.personas[id]}; renderAlumnos(); alert('Usuario duplicado'); } } }
-        function mostrarConfirmacionBorrar() { if(confirm('⚠️ ADVERTENCIA: ¿Borrar TODA la base de datos (Usuarios y Logs)?\n\nPresione OK para confirmar.')) { database.ref('personas').remove(); database.ref('logs').remove(); database.ref('logs_lejanos').remove(); location.reload(); } }
+        function duplicarMiembro() { 
+            const id = prompt('Código a duplicar:'); 
+            if(id && db.personas[id]) { 
+                const newId = prompt('Nuevo código para el duplicado:'); 
+                if(newId) { 
+                    db.personas[newId] = {...db.personas[id]}; 
+                    renderAlumnos(); 
+                    alert('Usuario duplicado'); 
+                } 
+            } 
+        }
+        function mostrarConfirmacionBorrar() { 
+            if(confirm('⚠️ ADVERTENCIA: ¿Borrar TODA la base de datos (Usuarios y Logs)?\n\nPresione OK para confirmar.')) { 
+                const userPath = getUserPath();
+                if (userPath) {
+                    database.ref(`${userPath}/personas`).remove(); 
+                    database.ref(`${userPath}/logs`).remove(); 
+                    database.ref(`${userPath}/logs_lejanos`).remove(); 
+                }
+                location.reload(); 
+            } 
+        }
         
-        function enviarWA(tel) { if(!tel || tel==='') { alert("No hay número registrado para este usuario."); return;} window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function enviarWA(tel) { 
+            if(!tel || tel==='') { 
+                alert("No hay número registrado para este usuario."); 
+                return;
+            } 
+            window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); 
+        }
         function enviarWA_Ausente(tel, nombreEstudiante) {
-            if(!tel || tel==='') { alert("No hay número registrado para este usuario."); return;} 
-            const msj = encodeURIComponent(`Hola, le escribimos de la Escuela La Carpio para informarle que el usuario ${nombreEstudiante} se encuentra ausente o sin registro de ingreso el día de hoy.`);
+            if(!tel || tel==='') { 
+                alert("No hay número registrado para este usuario."); 
+                return;
+            } 
+            const msj = encodeURIComponent(`Hola, le escribimos de la ${currentSchoolName || 'Escuela'} para informarle que el usuario ${nombreEstudiante} se encuentra ausente o sin registro de ingreso el día de hoy.`);
             window.open(`https://wa.me/506${tel.replace(/\D/g,'')}?text=${msj}`, '_blank');
         }
 
         function justificarAusencia(id, nombre) {
             const hISO = document.getElementById('reportDate').value;
             if(confirm(`¿Desea justificar la ausencia de ${nombre} para la fecha ${hISO}?`)) {
-                database.ref('logs').push({ 
-                    id: id, 
-                    nombre: nombre, 
-                    hora: new Date().toLocaleString(), 
-                    fechaISO: hISO, 
-                    tipo: 'JUSTIFICADA',
-                    lejano: false,
-                    distanciaMetros: 0
-                });
+                const userPath = getUserPath();
+                if (userPath) {
+                    database.ref(`${userPath}/logs`).push({ 
+                        id: id, 
+                        nombre: nombre, 
+                        hora: new Date().toLocaleString(), 
+                        fechaISO: hISO, 
+                        tipo: 'JUSTIFICADA',
+                        lejano: false,
+                        distanciaMetros: 0
+                    });
+                }
                 alert('La ausencia ha sido justificada con éxito. Se ha marcado con una ⭐.');
             }
         }
@@ -1731,13 +1962,16 @@
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0a0e27;}.card{width:280px;height:420px;background:#1a1f3a;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);overflow:hidden;position:relative;border:1px solid #2a3250;}.header{background:#00d9ff;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0e27;text-align:center;font-weight:bold;}.qr-container{background:#1a1f3a;padding:15px;border-radius:10px;margin-top:20px;display:inline-block;border:1px solid #2a3250;}.info{padding:20px;text-align:center;color:#e8eef5;}.id-label{font-size:1.6rem;font-weight:900;color:#00d9ff;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#00d9ff 33%,#1a1f3a 33%,#1a1f3a 66%,#ff4444 66%);}</style></head><body><div class="card"><div class="header">ESCUELA LA CARPIO<br><span style="font-size:0.8rem; font-weight:normal;">${p.tipoUsuario || 'Estudiante'}</span></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#a8b2c1;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0a0e27;}.card{width:280px;height:420px;background:#1a1f3a;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);overflow:hidden;position:relative;border:1px solid #2a3250;}.header{background:#00d9ff;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0e27;text-align:center;font-weight:bold;}.qr-container{background:#1a1f3a;padding:15px;border-radius:10px;margin-top:20px;display:inline-block;border:1px solid #2a3250;}.info{padding:20px;text-align:center;color:#e8eef5;}.id-label{font-size:1.6rem;font-weight:900;color:#00d9ff;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#00d9ff 33%,#1a1f3a 33%,#1a1f3a 66%,#ff4444 66%);}</style></head><body><div class="card"><div class="header">${currentSchoolName || 'ESCUELA'}<br><span style="font-size:0.8rem; font-weight:normal;">${p.tipoUsuario || 'Estudiante'}</span></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#a8b2c1;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
             win.document.close();
         }
 
         function imprimirTodosLosCarnets() {
-            const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body><style>@media print { div { page-break-inside: avoid; } }</style>`);
-            Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;font-family:sans-serif;"><div id="qr-${id.replace(/\W/g,'')}"></div><br><b style="font-size:1.2rem;">${id}</b><br>${p.nombre}<br><small>${p.tipoUsuario||'Estudiante'} - ${p.puesto||''}</small></div>`); });
+            const win = window.open('',''); 
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body><style>@media print { div { page-break-inside: avoid; } }</style>`);
+            Object.entries(db.personas).forEach(([id,p]) => { 
+                win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;font-family:sans-serif;"><div id="qr-${id.replace(/\W/g,'')}"></div><br><b style="font-size:1.2rem;">${id}</b><br>${p.nombre}<br><small>${p.tipoUsuario||'Estudiante'} - ${p.puesto||''}</small></div>`); 
+            });
             win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\\W/g,'')}\"),{text:"${id}",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
         }
@@ -1761,8 +1995,16 @@
             resetIdleTimer();
         }
 
-        function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; detenerCamaras(); resetIdleTimer(); }
-        function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('home-view'); detenerCamaras(); }
+        function cerrarMaster() { 
+            document.getElementById('master-panel').style.display = 'none'; 
+            detenerCamaras(); 
+            resetIdleTimer(); 
+        }
+        function cerrarVistaProtegida(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            mostrarVista('home-view'); 
+            detenerCamaras(); 
+        }
         
         function cambiarTab(n) { 
             document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
@@ -1774,7 +2016,13 @@
             document.getElementById('tab3').className = (n===3)?'tab-btn active':'tab-btn'; 
         }
         
-        function filtrarRapido() { let f = document.getElementById('busqueda').value.toUpperCase(); let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } }
+        function filtrarRapido() { 
+            let f = document.getElementById('busqueda').value.toUpperCase(); 
+            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); 
+            for (let i = 0; i < rows.length; i++) { 
+                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; 
+            } 
+        }
 
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
@@ -1792,19 +2040,22 @@
                 window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
             };
             
-            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
-                const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ 
-                    s.forEach(c => { 
-                        let l=c.val(); 
-                        let alertTag = l.lejano ? ` <span style="color:var(--accent-danger); font-size: 0.75rem;">(Lejos de Escuela: ${l.distanciaMetros}m)</span>` : "";
-                        let statusColor = l.tipo === 'ENTRADA' ? '#00ff88' : (l.tipo === 'SALIDA' ? '#ff4444' : '#ffb800');
-                        list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${statusColor}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
-                    }); 
-                }
-                else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros históricos o del día de hoy.</p>"; }
-                document.getElementById('parentResult').style.display = 'block';
-            });
+            const userPath = getUserPath();
+            if (userPath) {
+                database.ref(`${userPath}/logs`).orderByChild('id').equalTo(id).once('value', (s) => {
+                    const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                    if(s.exists()){ 
+                        s.forEach(c => { 
+                            let l=c.val(); 
+                            let alertTag = l.lejano ? ` <span style="color:var(--accent-danger); font-size: 0.75rem;">(Lejos de Escuela: ${l.distanciaMetros}m)</span>` : "";
+                            let statusColor = l.tipo === 'ENTRADA' ? '#00ff88' : (l.tipo === 'SALIDA' ? '#ff4444' : '#ffb800');
+                            list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${statusColor}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
+                        }); 
+                    }
+                    else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros históricos o del día de hoy.</p>"; }
+                    document.getElementById('parentResult').style.display = 'block';
+                });
+            }
         }
 
         // FUNCIÓN NUEVA: Redirigir a vista de consulta específica desde la tabla TODOS
@@ -1841,7 +2092,11 @@
                     alert("No hay registros en la base de datos para este día.");
                     return;
                 }
-                registrosABorrar.forEach(l => database.ref('logs/'+l.key).remove()); 
+                
+                const userPath = getUserPath();
+                if (userPath) {
+                    registrosABorrar.forEach(l => database.ref(`${userPath}/logs/${l.key}`).remove()); 
+                }
                 alert(`✅ Se eliminaron ${registrosABorrar.length} registros correspondientes al día ${hISO}.`);
                 filtrarVistaReporte('TODOS');
             }
@@ -1909,7 +2164,14 @@
             doc.save(`Reporte_Asistencia_${document.getElementById('reportDate').value}.pdf`);
         }
 
-        function mostrarAyuda(t) { alert("SISTEMA DE ASISTENCIA FACIAL CON GEOCERCA\n\n1. Asegúrate de estar dentro del rango geográfico configurado en la escuela.\n2. Presiona 'Iniciar Escáner'.\n3. Mire a la cámara para guardar la asistencia.\n4. El sistema emitirá una melodía de éxito y desactivará la cámara automáticamente para la siguiente persona."); }
+        function mostrarAyuda(t) { 
+            alert("SISTEMA DE ASISTENCIA FACIAL CON GEOCERCA\n\n1. Asegúrate de estar dentro del rango geográfico configurado en la escuela.\n2. Presiona 'Iniciar Escáner'.\n3. Mire a la cámara para guardar la asistencia.\n4. El sistema emitirá una melodía de éxito y desactivará la cámara automáticamente para la siguiente persona."); 
+        }
+
+        // Función para iniciar escaneo directo sin login
+        function iniciarEscaneoDirecto() {
+            mostrarVista('scan-view');
+        }
 
         // Inicializar vista por defecto en pantalla inactiva
         mostrarVista('home-view');
