@@ -2,2180 +2,448 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a0e27">
-    <meta name="description" content="Sistema de asistencia con IA - Escuela La Carpio">
-    <title>Asistencia Facial - Escuela La Carpio</title>
-    
-    <!-- Firebase (Usando versión 8 por compatibilidad con el código base) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    
-    <!-- Face-API.js (Reconocimiento Facial) -->
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    
-    <!-- QR Code (Para generación de carnés) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <!-- PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OFICIAL AUTENTICADA Manager v2.2 - Master Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ============================================
-           VARIABLES Y TEMA MINIMALISTA NEGRO / CLARO
-           ============================================ */
-        :root {
-            --bg-dark: #0a0e27;
-            --bg-darker: #050810;
-            --bg-card: #1a1f3a;
-            --bg-hover: #242d4a;
-            --text-primary: #e8eef5;
-            --text-secondary: #a8b2c1;
-            --text-muted: #7a8299;
-            
-            --accent-primary: #00d9ff;
-            --accent-secondary: #00b8d4;
-            --accent-success: #00ff88;
-            --accent-warning: #ffb800;
-            --accent-danger: #ff4444;
-            
-            --border-subtle: #2a3250;
-            --border-light: #3a4560;
-            
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
-            --shadow-glow: 0 0 20px rgba(0, 217, 255, 0.15);
-            
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 16px;
-            
-            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Tema Claro */
-        body.light-theme {
-            --bg-dark: #f0f4f8;
-            --bg-darker: #e2e8f0;
-            --bg-card: #ffffff;
-            --bg-hover: #f1f5f9;
-            --text-primary: #1e293b;
-            --text-secondary: #475569;
-            --text-muted: #64748b;
-            --border-subtle: #cbd5e1;
-            --border-light: #94a3b8;
-            --shadow-glow: 0 0 20px rgba(0, 184, 212, 0.15);
-        }
-
-        /* ============================================
-           ANIMACIONES
-           ============================================ */
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes glow-pulse {
-            0%, 100% { box-shadow: 0 0 10px rgba(0, 217, 255, 0.2), var(--shadow-md); }
-            50% { box-shadow: 0 0 30px rgba(0, 217, 255, 0.4), var(--shadow-lg); }
-        }
-        @keyframes success-pop {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes scanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-
-        /* ============================================
-           RESET Y BASE
-           ============================================ */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; width: 100%; }
-        
-        /* FONDO ACTUALIZADO: Gradiente + Imagen Alta Resolución (Unsplash) */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            font-size: 15px;
-            line-height: 1.6;
-            color: var(--text-primary);
-            background: linear-gradient(135deg, rgba(10, 14, 39, 0.88) 0%, rgba(5, 8, 16, 0.95) 100%), 
-                        url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1920&auto=format&fit=crop') center/cover fixed;
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            animation: fade-in 0.6s ease-out;
-            transition: background var(--transition-normal), color var(--transition-fast);
-        }
-
-        /* ============================================
-           NAVBAR MINIMALISTA
-           ============================================ */
-        .navbar {
-            background: rgba(10, 14, 39, 0.95);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(10px);
-            z-index: 100;
-            gap: 16px;
-            box-shadow: var(--shadow-md);
-            transition: opacity 0.5s ease;
-        }
-        body.light-theme .navbar {
-            background: rgba(240, 244, 248, 0.95);
-        }
-        .navbar-title { 
-            font-weight: 600; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent-primary); 
-            text-transform: uppercase; flex: 1; display: flex; align-items: center; gap: 10px;
-        }
-        .navbar-title img { max-height: 45px; border-radius: 8px; object-fit: contain; }
-        .navbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-        /* ============================================
-           VISTAS PRINCIPALES
-           ============================================ */
-        #scan-view, #parent-view, #register-view, #home-view {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            padding: 24px; overflow-y: auto; animation: fade-in 0.4s ease-out;
-        }
-        #scan-view, #parent-view, #register-view { display: none; }
-
-        /* VISTA HOME (IDLE) */
-        #home-view { background: transparent; justify-content: center; }
-        .home-clock {
-            font-size: 5.5rem; font-weight: 800; color: rgba(255, 255, 255, 0.95);
-            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.7); margin-bottom: 10px;
-            letter-spacing: 2px; text-align: center;
-        }
-        .home-subtitle {
-            font-size: 1.2rem; color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); text-align: center;
-            background: rgba(0, 0, 0, 0.5); padding: 12px 28px; border-radius: 30px;
-            backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        /* ============================================
-           TARJETAS MINIMALISTAS
-           ============================================ */
-        .card {
-            background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 32px;
-            border-radius: var(--radius-lg); width: 100%; max-width: 480px; box-shadow: var(--shadow-lg);
-            animation: slide-up 0.5s ease-out; transition: all var(--transition-normal); position: relative; 
-            overflow: hidden; margin: auto; margin-bottom: 20px; flex-shrink: 0;
-        }
-        .card:hover { border-color: var(--border-light); box-shadow: var(--shadow-lg), var(--shadow-glow); transform: translateY(-2px); }
-        .card h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 24px; color: var(--accent-primary); letter-spacing: 0.5px; }
-
-        /* ============================================
-           INPUTS Y BOTONES
-           ============================================ */
-        input[type="text"], input[type="email"], input[type="date"], input[type="password"], input[type="number"], select {
-            width: 100%; padding: 12px 16px; font-size: 0.95rem; background: var(--bg-hover);
-            border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-primary);
-            outline: none; transition: all var(--transition-fast); margin-bottom: 15px; box-sizing: border-box;
-        }
-        input:focus, select:focus { border-color: var(--accent-primary); background: rgba(0, 217, 255, 0.05); }
-
-        .btn {
-            padding: 11px 20px; border: 1px solid transparent; border-radius: var(--radius-md);
-            cursor: pointer; font-weight: 600; color: var(--text-primary); display: inline-flex;
-            align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem;
-            transition: all var(--transition-fast); text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .btn-m { background: var(--accent-primary); color: var(--bg-dark); border-color: var(--accent-primary); }
-        .btn-m:hover:not(:disabled) { background: var(--accent-secondary); box-shadow: 0 0 20px rgba(0, 217, 255, 0.3); transform: translateY(-2px); }
-        .btn-s { background: var(--accent-success); color: var(--bg-dark); border-color: var(--accent-success); }
-        .btn-s:hover:not(:disabled) { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); transform: translateY(-2px); }
-        .btn-d { background: var(--accent-danger); color: white; border-color: var(--accent-danger); }
-        .btn-d:hover:not(:disabled) { box-shadow: 0 0 20px rgba(255, 68, 68, 0.3); transform: translateY(-2px); }
-        .btn-i { background: var(--accent-secondary); color: white; border-color: var(--accent-secondary); }
-        .btn-i:hover:not(:disabled) { box-shadow: 0 0 20px rgba(0, 184, 212, 0.3); transform: translateY(-2px); }
-        .btn-w { background: var(--accent-warning); color: var(--bg-dark); border-color: var(--accent-warning); }
-        .btn-dark { background: transparent; border: 1px solid var(--border-light); color: var(--text-primary); }
-        .btn-full { width: 100%; margin-top: 10px; margin-bottom: 10px; }
-
-        .btn-group { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-        .btn-group .btn { flex: 1; min-width: 110px; }
-
-        /* ============================================
-           CÁMARA FACIAL E IA
-           ============================================ */
-        .video-container {
-            position: relative; width: 100%; height: 320px; border-radius: var(--radius-lg);
-            overflow: hidden; background: #000; border: 2px solid var(--border-subtle);
-            display: none; box-shadow: var(--shadow-lg); transition: all 0.3s;
-        }
-        .video-container.active { display: block; border-color: var(--accent-primary); animation: glow-pulse 2s infinite; }
-        
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-        
-        .scan-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 45%, rgba(0, 217, 255, 0.4) 50%, transparent 55%);
-            background-size: 100% 200%; animation: scanline 2.5s linear infinite; pointer-events: none; opacity: 0; transition: opacity 0.3s;
-        }
-        .video-container.scanning .scan-overlay { opacity: 1; }
-
-        .ai-status {
-            font-size: 0.85rem; color: var(--accent-warning); text-align: center; margin-top: 10px; font-weight: bold;
-        }
-
-        /* ============================================
-           RESULTADOS Y MODALES
-           ============================================ */
-        #resBox {
-            margin-top: 15px; display: none; padding: 20px; border-radius: var(--radius-md);
-            border: 1px solid var(--border-light); background: var(--bg-hover);
-            animation: success-pop 0.4s ease-out; text-align: center;
-        }
-        #resBox h2 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--accent-success); }
-        #resBox h3 { margin: 0; font-size: 1rem; color: var(--text-secondary); }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-            z-index: 2000; display: none; padding: 24px; overflow-y: auto;
-            flex-direction: column; align-items: center; justify-content: flex-start;
-            backdrop-filter: blur(5px);
-        }
-
-        /* ============================================
-           PANEL MAESTRO Y TABLAS
-           ============================================ */
-        #master-panel {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 14, 39, 0.95); z-index: 1000; padding: 24px; box-sizing: border-box;
-            overflow-y: auto; border: 1px solid var(--border-subtle); backdrop-filter: blur(10px);
-        }
-        body.light-theme #master-panel { background: rgba(240, 244, 248, 0.95); }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; }
-        .panel-header h1 { color: var(--accent-primary); margin: 0; font-size: 1.5rem; flex: 1; }
-        
-        .panel-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        
-        .tabs-container { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); }
-        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
-        .tab-btn.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
-        
-        .power-bar { background: var(--bg-hover); padding: 16px; border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; border: 1px solid var(--border-subtle); }
-        .power-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; background: transparent; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-subtle); }
-        thead { background: var(--bg-hover); border-bottom: 1px solid var(--border-light); }
-        th { padding: 14px 16px; text-align: left; font-size: 0.8rem; font-weight: 700; color: var(--accent-primary); text-transform: uppercase; }
-        td { border-bottom: 1px solid var(--border-subtle); padding: 12px 16px; color: var(--text-primary); }
-        tbody tr:hover { background: var(--bg-hover); border-left: 3px solid var(--accent-primary); }
-
-        .status-badge { padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-        .status-in { background: rgba(0, 255, 136, 0.15); color: var(--accent-success); border: 1px solid rgba(0, 255, 136, 0.3); }
-        .status-none { background: rgba(255, 68, 68, 0.15); color: var(--accent-danger); border: 1px solid rgba(255, 68, 68, 0.3); }
-        
-        .link-history { color: var(--accent-primary); text-decoration: underline; cursor: pointer; font-weight: bold; }
-        .link-history:hover { color: var(--accent-secondary); }
-
-        /* SCROLLBAR */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-card); }
-        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
-
-        /* CRÉDITOS */
-        .credits-footer { margin-top: 15px; text-align: center; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.5px; font-weight: 500; }
-
-        @media print { .no-print { display: none !important; } body { background: white; color: black; } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 0.2; } 100% { transform: scale(0.95); opacity: 0.5; } }
+        .pulse-effect { animation: pulse-ring 2s infinite ease-in-out; }
+        .leaflet-container { background: #0f172a !important; font-family: inherit; }
+        .leaflet-bar a { background-color: #1e293b !important; color: #f1f5f9 !important; border-bottom: 1px solid #334155 !important; }
+        .leaflet-bar a:hover { background-color: #334155 !important; }
+        .status-badge { display: inline-block; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; }
+        .status-active { background: rgba(34, 197, 94, 0.1); color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+        .status-blocked { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+        .status-maintenance { background: rgba(251, 146, 60, 0.1); color: #fb923c; border-color: rgba(251, 146, 60, 0.3); }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .url-display { background: #080d1a; border: 1px solid #1e3a8a; padding: 0.75rem; border-radius: 0.75rem; font-family: 'Monaco', 'Courier New', monospace; font-size: 0.8rem; color: #60a5fa; word-break: break-all; display: flex; justify-content: space-between; align-items: center; }
+        .copy-btn { background: #1e3a8a; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .copy-btn:hover { background: #3b82f6; color: white; }
     </style>
 </head>
-<body>
+<body class="bg-[#060814] text-slate-200 min-h-screen font-sans overflow-x-hidden antialiased">
 
-    <!-- INPUTS OCULTOS PARA FONDOS Y LOGOS -->
-    <input type="file" id="bgUploader" accept="image/*" style="display:none;" onchange="procesarSubidaFondo(event)">
-    <input type="file" id="logoUploader" accept="image/png, image/jpeg" style="display:none;" onchange="procesarSubidaLogo(event)">
+    <!-- NOTIFICACIONES TOASTS -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2"></div>
 
-    <!-- NAVBAR -->
-    <div class="navbar no-print" id="main-navbar">
-        <div class="navbar-title" id="nav-logo-container">🤖 Asistencia IA</div>
-        <div class="navbar-actions">
-            <button class="btn btn-s" onclick="mostrarVista('register-view')" title="Registro General">📝 Registrarse</button>
-            <button class="btn btn-w" onclick="mostrarVista('parent-view')" title="Consulta directa en el sistema">🔍 Consulta</button>
-            <button class="btn btn-i" onclick="iniciarEscaneoDirecto()" title="Acceso al escáner">📷 Escáner Facial</button>
-            <button class="btn btn-m" onclick="abrirLogin('admin')" title="Panel administrativo">🔓 Admin</button>
-            <button id="btnSalir" class="btn btn-d" onclick="cerrarSesion()" title="Cerrar sesión" style="display:none;">🚪 Salir</button>
-        </div>
-    </div>
-
-    <!-- VISTA INACTIVA (HOME/LOGIN LIMPIO) -->
-    <div id="home-view" onclick="mostrarVista('parent-view')">
-        <div class="home-clock" id="home-clock-time">--:--</div>
-        <div class="home-subtitle">👆 Toque la pantalla o navegue en el menú superior para empezar</div>
-    </div>
-
-    <!-- MODAL DE INICIO DE SESIÓN CON FIREBASE AUTH -->
-    <div id="login-modal" class="modal-overlay">
-        <div class="card" style="max-width: 400px; text-align: center;">
-            <h2 id="login-title">🔒 Control de Acceso</h2>
-            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 20px;">
-                Ingrese sus credenciales autorizadas.
-            </p>
-            
-            <!-- Sección de Login -->
-            <div id="login-section">
-                <input type="email" id="loginEmail" placeholder="Correo electrónico" required>
-                <input type="password" id="loginPass" placeholder="Contraseña" required>
-                
-                <div class="btn-group">
-                    <button class="btn btn-m" style="flex:2;" onclick="procesarLogin()">Ingresar al Sistema</button>
-                    <button class="btn btn-d" style="flex:1;" onclick="cerrarLogin()">Cancelar</button>
-                </div>
-                
-                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.85rem;">
-                    ¿No tienes cuenta? <a href="#" onclick="mostrarRegistroDirector()" style="color: var(--accent-primary);">Regístrate aquí</a>
-                </p>
+    <!-- DIÁLOGO DE CONFIRMACIÓN -->
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-[#02040a]/90 z-[10000] hidden flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-slide-up">
+            <div class="flex items-center gap-3 text-amber-500 mb-4">
+                <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                <h3 class="text-lg font-bold text-white uppercase tracking-tight" id="confirm-title">¿Estás seguro?</h3>
             </div>
-            
-            <!-- Sección de Registro -->
-            <div id="registro-section" style="display: none;">
-                <h3>📝 Registro de Director</h3>
-                <input type="text" id="regNombreEscuela" placeholder="Nombre de la Escuela" required>
-                <input type="email" id="regEmail" placeholder="Correo electrónico" required>
-                <input type="password" id="regPass" placeholder="Contraseña" required>
-                
-                <div class="btn-group">
-                    <button class="btn btn-s" style="flex:2;" onclick="procesarRegistroDirector()">Registrar</button>
-                    <button class="btn btn-d" style="flex:1;" onclick="mostrarLoginDirector()">Cancelar</button>
-                </div>
-                
-                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.85rem;">
-                    ¿Ya tienes cuenta? <a href="#" onclick="mostrarLoginDirector()" style="color: var(--accent-primary);">Inicia sesión aquí</a>
-                </p>
+            <p class="text-slate-400 text-sm mb-6" id="confirm-message">Por favor confirma esta acción importante.</p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs uppercase tracking-wider transition-all">Cancelar</button>
+                <button id="confirm-success-btn" class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-500/50">Confirmar</button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA DE REGISTRO MULTI-PERFIL -->
-    <div id="register-view">
-        <div class="card" style="max-width: 650px; width: 100%;">
-            <h2 style="text-align: center;">📝 Registro Oficial de Usuarios</h2>
-            <p style="text-align:center; color:var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-                Todos los usuarios de la plataforma deben registrarse aquí. Se capturarán 4 ángulos de su rostro para máxima precisión.
-            </p>
+    <!-- PANTALLA DE ACCESO MAESTRO -->
+    <div id="auth-overlay" class="fixed inset-0 bg-[#060814] z-[999] flex flex-col items-center justify-center p-6">
+        <div class="bg-[#0f172a]/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-slate-800/80 w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                <input type="text" id="regId" placeholder="Cédula / Identificación" required>
-                <input type="text" id="regName" placeholder="Nombre Completo" required>
+            <div class="bg-cyan-500/10 p-4 rounded-2xl w-16 h-16 mx-auto mb-6 flex items-center justify-center border border-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/5">
+                <i data-lucide="globe" class="w-8 h-8 pulse-effect"></i>
             </div>
+            <h1 class="text-2xl font-black mb-1 text-white text-center uppercase tracking-tight">OFICIAL AUTENTICADA</h1>
+            <p class="text-slate-400 mb-8 text-xs text-center font-bold tracking-widest uppercase">Panel Manager SaaS v2.2</p>
             
-            <select id="regRole" onchange="toggleStudentField()">
-                <option value="">-- Seleccione su Perfil --</option>
-                <option value="Estudiante">Estudiante</option>
-                <option value="Padre/Encargado">Padre o Encargado</option>
-                <option value="Administrativo">Administrativo</option>
-                <option value="Docente">Docente</option>
-                <option value="Servidores">Servidor/a (Conserje, Comedor, etc.)</option>
-                <option value="Junta">Miembro de la Junta</option>
-                <option value="Visitante">Visitante</option>
-            </select>
-
-            <input type="text" id="regStudentId" placeholder="Cédula de su hijo/a (Obligatorio para enlazar)" style="display:none; border-color: var(--accent-warning);">
-            <input type="text" id="regSection" placeholder="Sección / Puesto / Motivo de visita">
-            <input type="text" id="regPhone" placeholder="Número de WhatsApp">
-
-            <div id="reg-cam-container" class="video-container" style="margin-top: 15px;">
-                <video id="reg-video-pub" autoplay muted playsinline></video>
-                <canvas id="reg-canvas-pub"></canvas>
-            </div>
-
-            <div id="reg-instructions" style="text-align:center; margin-top: 15px; color: var(--accent-warning); font-weight: bold; font-size: 1.1rem;">
-                Llene sus datos personales y presione "1️⃣ Iniciar Cámara".
-            </div>
-
-            <div class="btn-group" style="margin-top: 20px;">
-                <button id="btnStartRegCam" class="btn btn-i" onclick="iniciarCamaraRegistro()">1️⃣ Iniciar Cámara</button>
-                <button id="btnCaptureProfile" class="btn btn-m" onclick="capturarPerfilRegistro()" disabled>📸 Capturar Perfil (0/4)</button>
-                <button id="btnSaveRegistry" class="btn btn-s" onclick="guardarRegistroCompleto()" disabled>💾 Guardar Registro</button>
-                <button class="btn btn-d" onclick="cerrarVistaProtegida('register-view')">❌ Cancelar</button>
-            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Administrador</label>
+                    <input type="email" id="email" required placeholder="admin@oficial-autenticada.com" class="w-full p-4 rounded-xl bg-[#080d1a] border border-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white outline-none transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Contraseña Maestra</label>
+                    <input type="password" id="password" required placeholder="••••••••" class="w-full p-4 rounded-xl bg-[#080d1a] border border-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white outline-none transition-all">
+                </div>
+                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs shadow-lg shadow-cyan-500/10">Autenticar Sistema</button>
+            </form>
+            <p id="auth-error" class="text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl mt-4 text-xs hidden font-bold text-center uppercase tracking-wider"></p>
         </div>
-        <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
-    <!-- VISTA DE ESCANEO FACIAL -->
-    <div id="scan-view">
-        <div class="card" style="max-width: 550px;">
-            <h2 style="text-align: center;">🤖 Asistencia de Estudiantes</h2>
-            
-            <div id="scan-video-container" class="video-container">
-                <video id="scan-video" autoplay muted playsinline></video>
-                <canvas id="scan-canvas"></canvas>
-                <div class="scan-overlay"></div>
-            </div>
-            
-            <p id="scan-ai-status" class="ai-status">Esperando activación...</p>
-
-            <button id="btnCamaraMain" class="btn btn-i btn-full" onclick="toggleScanner()">🟢 Iniciar Escáner</button>
-
-            <!-- Resultado de escaneo exitoso con Emociones -->
-            <div id="resBox">
-                <h2 id="resNombre"></h2>
-                <h3 id="resMov"></h3>
-            </div>
-
-            <div class="btn-group">
-                <button class="btn btn-w" onclick="mostrarAyuda('escaneo')">❓ Ayuda</button>
-                <button class="btn btn-d" onclick="cerrarVistaProtegida('scan-view')">Cerrar</button>
-            </div>
-        </div>
-        <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
-    </div>
-
-    <!-- VISTA DE CONSULTA -->
-    <div id="parent-view">
-        <div class="card" style="max-width: 520px;">
-            <h2>👁️ Consulta de Asistencia por Rostro / ID</h2>
-            
-            <!-- Cámara de Consulta Directa -->
-            <div id="query-video-container" class="video-container">
-                <video id="query-video" autoplay muted playsinline></video>
-                <canvas id="query-canvas"></canvas>
-                <div class="scan-overlay"></div>
-            </div>
-            <p id="query-ai-status" class="ai-status" style="margin-bottom: 12px;">La cámara de consulta permite reconocerte a ti o a tus padres automáticamente.</p>
-            
-            <button id="btnCamaraQuery" class="btn btn-m btn-full" onclick="toggleQueryScanner()">📷 Iniciar Consulta por Rostro</button>
-            
-            <div style="text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.85rem;">
-                - O CONSULTA MANUAL POR CÉDULA -
-            </div>
-
-            <input type="text" id="parentInput" placeholder="Cédula o código del estudiante..." style="text-align:center;">
-            <button class="btn btn-s btn-full" onclick="consultarPadre()">Buscar por ID</button>
-            
-            <!-- Resultados de consulta -->
-            <div id="parentResult" style="display:none; margin-top:20px;">
-                <div style="background: var(--bg-hover); padding:16px; border-radius:10px; border:1px solid var(--border-subtle); margin-bottom:15px;">
-                    <h3 id="parentStudentName" style="color:var(--accent-primary); margin-bottom:5px;"></h3>
-                    <p id="parentStudentPuesto" style="color:var(--text-secondary);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w btn-full">💬 Consultar por WhatsApp</button>
-                </div>
-                <div id="parentLogList" style="max-height: 200px; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:10px; padding:10px;"></div>
-            </div>
-            
-            <button class="btn btn-dark btn-full" onclick="limpiarConsultaPadres()">🔄 Nueva Consulta</button>
-        </div>
-        <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
-    </div>
-
-    <!-- PANEL MAESTRO -->
-    <div id="master-panel">
-        <div class="panel-header">
-            <h1>⚙️ Administración</h1>
-            <div class="panel-header-actions">
-                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 TEL</button>
-                <button class="btn btn-i" onclick="document.getElementById('bgUploader').click()">🖼️ FONDO</button>
-                <button class="btn btn-m" onclick="document.getElementById('logoUploader').click()">🎨 LOGO</button>
-                <button class="btn btn-m" onclick="mostrarEstadisticas()">📈 STATS</button>
-                <button class="btn btn-s" onclick="mostrarConfiguracion()">⚙️ CONFIG</button>
-                <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
-            </div>
-        </div>
-
-        <div class="tabs-container">
-            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 Miembros</button>
-            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 Reportes</button>
-            <button id="tab3" class="tab-btn" onclick="cambiarTab(3)">🌍 Geolocalización</button>
-        </div>
-
-        <!-- SECCIÓN MIEMBROS -->
-        <div id="sec-alumnos">
-            <div class="power-bar no-print">
-                <div class="power-bar-actions">
-                    <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
-                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR</button>
-                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS</button>
-                    <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR</button>
-                    <button class="btn btn-w" onclick="exportarCSV()">📥 EXPORTAR CSV</button>
-                    <button class="btn btn-d" style="border-color: var(--accent-danger);" onclick="exportarPDFMiembros()">📕 EXPORTAR PDF</button>
-                    <button class="btn btn-i" onclick="duplicarMiembro()">👥 DUPLICAR</button>
-                    <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
-                    <span id="admin-ai-status" class="ai-status" style="margin-left: 15px;">IA No cargada</span>
-                </div>
-                <button class="btn btn-d btn-full" style="margin-top: 10px;" onclick="mostrarConfirmacionBorrar()">🧨 BORRAR TODA LA BASE DE DATOS</button>
-            </div>
-            
-            <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()">
-            
-            <table id="tabla-miembros-pdf">
-                <thead>
-                    <tr>
-                        <th>Estado</th>
-                        <th>Código</th>
-                        <th>Rol</th>
-                        <th>Nombre</th>
-                        <th>Sección/Motivo</th>
-                        <th>WhatsApp</th>
-                        <th>Rostro Principal</th>
-                        <th>Rostros Encargados</th>
-                        <th class="no-print">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaAlumnos"></tbody>
-            </table>
-        </div>
-
-        <!-- SECCIÓN REPORTE -->
-        <div id="sec-reporte" style="display:none;">
-            <div class="power-bar no-print">
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <label style="color: var(--text-secondary); font-weight:bold;">Fecha de Consulta:</label>
-                    <input type="date" id="reportDate" style="margin:0; max-width:150px;">
-                </div>
-                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
-                    <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ Llegaron</button>
-                    <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 Salieron</button>
-                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ Ausentes</button>
-                    <button class="btn btn-i" onclick="filtrarVistaReporte('TODOS')">📋 Todos</button>
-                </div>
-                <div style="display:flex; gap:5px; margin-top:10px;">
-                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF REPORTE</button>
-                    <button class="btn btn-dark" onclick="borrarHistorialDia()">🗑️ Borrar Día Seleccionado</button>
-                </div>
-            </div>
-            <h2 id="tituloReporte" style="color:var(--accent-primary); text-align:center; margin:20px 0;">Seleccione un filtro</h2>
-            <table id="tabla-logs-final">
-                <thead id="headReporte"></thead>
-                <tbody id="cuerpoReporte"></tbody>
-            </table>
-        </div>
-
-        <!-- SECCIÓN GEOLOCALIZACIÓN -->
-        <div id="sec-geolocalizacion" style="display:none;">
-            <div class="power-bar">
-                <h3 style="color: var(--accent-primary); margin-bottom: 10px;">📍 Configuración de Geocerca del Centro Educativo</h3>
-                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Establece las coordenadas del centro. <b>Si un escaneo supera el radio o posee baja precisión GPS (>100m), NO se marcará su asistencia real.</b></p>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+    <!-- CONTENIDO PRINCIPAL -->
+    <div id="main-content" class="hidden flex-col min-h-screen">
+        <header class="bg-[#0f172a]/85 border-b border-slate-800/80 p-4 sticky top-0 backdrop-blur-xl z-40">
+            <div class="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-cyan-600 p-2.5 rounded-xl shadow-lg shadow-cyan-500/15 text-slate-950"><i data-lucide="shield" class="w-5 h-5"></i></div>
                     <div>
-                        <label style="font-weight: bold; color: var(--text-primary);">Latitud Centro:</label>
-                        <input type="number" step="any" id="geoLat" value="9.9388">
-                    </div>
-                    <div>
-                        <label style="font-weight: bold; color: var(--text-primary);">Longitud Centro:</label>
-                        <input type="number" step="any" id="geoLng" value="-84.1200">
-                    </div>
-                    <div>
-                        <label style="font-weight: bold; color: var(--text-primary);">Radio Permitido (metros):</label>
-                        <input type="number" id="geoRadio" value="150">
+                        <h2 class="text-sm font-black text-white uppercase tracking-wider">OFICIAL AUTENTICADA <span class="text-cyan-400">Manager</span></h2>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Control Multitenant SaaS v2.2</span>
                     </div>
                 </div>
-                <button class="btn btn-s" style="margin-top: 15px;" onclick="guardarConfigGeo()">💾 Guardar Geocerca</button>
-            </div>
-
-            <h2 style="color:var(--accent-primary); margin: 25px 0 10px 0;">🌍 Historial de Escaneos Lejanos Detectados (Rechazados)</h2>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha/Hora</th>
-                            <th>Código</th>
-                            <th>Nombre Alumno</th>
-                            <th>Distancia Calculada</th>
-                            <th>Coordenadas Dispositivo</th>
-                            <th class="no-print">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaLogsLejanos"></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="credits-footer" style="padding: 20px 0;">prodigital-72284602 • Derechos Reservados</div>
-    </div>
-
-    <!-- MODAL DE CAPTURA DE ROSTRO (ADMIN) -->
-    <div id="face-modal" class="modal-overlay">
-        <div class="card" style="text-align:center; max-width: 500px;">
-            <h2 id="modalFaceTitle">📸 Registrar Rostro</h2>
-            <p style="color:var(--text-secondary); margin-bottom: 15px;">Estudiante: <b id="modal-student-name" style="color:var(--text-primary);"></b></p>
-            
-            <div id="reg-video-container" class="video-container active">
-                <video id="reg-video" autoplay muted playsinline></video>
-                <canvas id="reg-canvas"></canvas>
-            </div>
-            
-            <p id="reg-status" style="margin-top: 15px; font-weight: bold; color: var(--accent-warning);">Buscando rostro...</p>
-
-            <div class="btn-group">
-                <button id="btnCaptureFace" class="btn btn-s" disabled onclick="capturarYGuardarRostro()">💾 Guardar Rostro</button>
-                <button class="btn btn-d" onclick="cerrarFaceModal()">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ============================================
-        // CONFIGURACIÓN FIREBASE (Con credenciales provistas)
-        // ============================================
-        let NUMERO_OFICIAL_JUNTA = "88888888"; 
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyBSGIsqoZlZIedWlvNwVnhYrZI0LBherz0",
-            authDomain: "multiasistencia-e4d34.firebaseapp.com",
-            databaseURL: "https://multiasistencia-e4d34-default-rtdb.firebaseio.com",
-            projectId: "multiasistencia-e4d34",
-            storageBucket: "multiasistencia-e4d34.firebasestorage.app",
-            messagingSenderId: "583512920398",
-            appId: "1:583512920398:web:57c98e146ff88e63a08e1f",
-            measurementId: "G-YR8DZLVE0K"
-        };
-        
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const database = firebase.database();
-
-        // Variables globales actualizadas
-        let currentUserUID = null;
-        let currentSchoolName = null;
-        let db = { personas: {} };
-        let logsGlobal = [];
-        let logsLejanosGlobal = [];
-
-        // Parámetros geocerca por defecto
-        let geoConfig = { lat: 9.9388, lng: -84.1200, radio: 150 };
-
-        // Función para obtener la ruta de datos del usuario actual
-        function getUserPath() {
-            if (!currentUserUID) return null;
-            return `directores/${currentUserUID}`;
-        }
-
-        document.getElementById('reportDate').value = new Date().toLocaleDateString('sv-SE');
-        
-        // Listener Config
-        database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
-        database.ref('config/geocerca').on('value', (s) => { 
-            if(s.val()) { 
-                geoConfig = s.val(); 
-                document.getElementById('geoLat').value = geoConfig.lat;
-                document.getElementById('geoLng').value = geoConfig.lng;
-                document.getElementById('geoRadio').value = geoConfig.radio;
-            } 
-        });
-
-        // Configuración de Tema Claro/Oscuro por defecto
-        if (localStorage.getItem('theme') === 'light') {
-            document.body.classList.add('light-theme');
-        }
-
-        // Cargar imagen de fondo y logo si existen (con prefijo de UID)
-        function cargarFondoPersonalizado() {
-            if (currentUserUID) {
-                const bgKey = `CUSTOM_BG_${currentUserUID}`;
-                const bgBase64 = localStorage.getItem(bgKey);
-                if (bgBase64) {
-                    document.body.style.backgroundImage = `url(${bgBase64})`;
-                }
-            }
-        }
-        
-        function cargarLogoPersonalizado() {
-            if (currentUserUID) {
-                const logoKey = `CUSTOM_LOGO_${currentUserUID}`;
-                const logoBase64 = localStorage.getItem(logoKey);
-                const navContainer = document.getElementById('nav-logo-container');
-                if (logoBase64) {
-                    navContainer.innerHTML = `<img src="${logoBase64}" alt="Logo Oficial">`;
-                } else {
-                    navContainer.innerHTML = `🤖 Asistencia IA`;
-                }
-            }
-        }
-
-        // ============================================
-        // SISTEMA DE INICIO DE SESIÓN SEGURO (FIREBASE AUTH)
-        // ============================================
-        let contextoLogin = '';
-
-        function abrirLogin(tipo) {
-            contextoLogin = tipo;
-            const modal = document.getElementById('login-modal');
-            const emailInput = document.getElementById('loginEmail');
-            const passInput = document.getElementById('loginPass');
-            const title = document.getElementById('login-title');
-
-            passInput.value = ''; // Limpiar contraseña por seguridad
-
-            if (tipo === 'admin') {
-                title.innerHTML = "🔓 Panel de Administrador";
-                emailInput.value = ""; // No autocompletar para directores
-            }
-
-            modal.style.display = 'flex';
-            mostrarLoginDirector(); // Mostrar sección de login por defecto
-        }
-
-        function cerrarLogin() {
-            document.getElementById('login-modal').style.display = 'none';
-        }
-
-        function mostrarLoginDirector() {
-            document.getElementById('login-section').style.display = 'block';
-            document.getElementById('registro-section').style.display = 'none';
-        }
-
-        function mostrarRegistroDirector() {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('registro-section').style.display = 'block';
-        }
-
-        function procesarLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const pass = document.getElementById('loginPass').value;
-
-            if (!email || !pass) {
-                alert("Por favor, ingrese el correo y la contraseña.");
-                return;
-            }
-
-            firebase.auth().signInWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    currentUserUID = user.uid;
-                    
-                    // Obtener nombre de la escuela
-                    database.ref(`directores/${currentUserUID}/nombreEscuela`).once('value')
-                        .then(snapshot => {
-                            currentSchoolName = snapshot.val() || "Escuela Sin Nombre";
-                            document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
-                            cargarFondoPersonalizado();
-                            cargarLogoPersonalizado();
-                            document.getElementById('btnSalir').style.display = 'inline-block';
-                            cerrarLogin();
-                            
-                            if (contextoLogin === 'admin') {
-                                attachUserListeners();
-                                document.getElementById('master-panel').style.display = 'block';
-                                inicializarIA();
-                                resetIdleTimer();
-                            }
-                        });
-                })
-                .catch((error) => {
-                    alert("Acceso Denegado. Contraseña o correo incorrectos.\n\n" + error.message);
-                });
-        }
-
-        function procesarRegistroDirector() {
-            const nombreEscuela = document.getElementById('regNombreEscuela').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const pass = document.getElementById('regPass').value;
-
-            if (!nombreEscuela || !email || !pass) {
-                alert("Por favor, complete todos los campos.");
-                return;
-            }
-
-            firebase.auth().createUserWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    currentUserUID = user.uid;
-                    
-                    // Guardar información del director
-                    database.ref(`directores/${currentUserUID}`).set({
-                        nombreEscuela: nombreEscuela,
-                        email: email,
-                        fechaRegistro: new Date().toISOString()
-                    }).then(() => {
-                        currentSchoolName = nombreEscuela;
-                        document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
-                        document.getElementById('btnSalir').style.display = 'inline-block';
-                        cerrarLogin();
-                        alert("Registro exitoso. Bienvenido al sistema.");
-                    });
-                })
-                .catch((error) => {
-                    alert("Error en el registro: " + error.message);
-                });
-        }
-
-        function cerrarSesion() {
-            firebase.auth().signOut().then(() => {
-                currentUserUID = null;
-                currentSchoolName = null;
-                document.getElementById('nav-logo-container').innerHTML = "🤖 Asistencia IA";
-                document.getElementById('btnSalir').style.display = 'none';
-                
-                // Limpiar datos locales
-                db = { personas: {} };
-                logsGlobal = [];
-                logsLejanosGlobal = [];
-                renderAlumnos();
-                renderGeolocalizacion();
-                
-                // Limpiar localStorage personalizado
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('CUSTOM_LOGO_') || key.startsWith('CUSTOM_BG_')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                mostrarVista('home-view');
-                alert("Sesión cerrada correctamente.");
-            });
-        }
-
-        // Listener de estado de autenticación
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-                currentUserUID = user.uid;
-                database.ref(`directores/${currentUserUID}/nombreEscuela`).once('value')
-                    .then(snapshot => {
-                        currentSchoolName = snapshot.val() || "Escuela Sin Nombre";
-                        document.getElementById('nav-logo-container').innerHTML = `🏫 ${currentSchoolName}`;
-                        document.getElementById('btnSalir').style.display = 'inline-block';
-                        cargarFondoPersonalizado();
-                        cargarLogoPersonalizado();
-                        attachUserListeners();
-                        inicializarIA();
-                    });
-            } else {
-                currentUserUID = null;
-                currentSchoolName = null;
-                document.getElementById('btnSalir').style.display = 'none';
-                document.getElementById('nav-logo-container').innerHTML = "🤖 Asistencia IA";
-            }
-        });
-
-        // Función para adjuntar listeners específicos del usuario
-        function attachUserListeners() {
-            if (!currentUserUID) return;
-            
-            const userPath = getUserPath();
-            if (!userPath) return;
-            
-            // Listener personas
-            database.ref(`${userPath}/personas`).on('value', (s) => { 
-                db.personas = s.val() || {}; 
-                renderAlumnos(); 
-                construirFaceMatcher(); 
-            });
-            
-            // Listener logs
-            database.ref(`${userPath}/logs`).on('value', (s) => { 
-                logsGlobal = []; 
-                s.forEach(c => { let val = c.val(); val.key = c.key; logsGlobal.push(val); });
-                renderAlumnos(); 
-            });
-
-            // Listener logs_lejanos
-            database.ref(`${userPath}/logs_lejanos`).on('value', (s) => {
-                logsLejanosGlobal = [];
-                s.forEach(c => { let val = c.val(); val.key = c.key; logsLejanosGlobal.push(val); });
-                renderGeolocalizacion();
-            });
-        }
-
-        // ============================================
-        // SISTEMA DE INACTIVIDAD (IDLE)
-        // ============================================
-        let idleTimeout;
-        const IDLE_TIME = 45000; 
-
-        function resetIdleTimer() {
-            clearTimeout(idleTimeout);
-            
-            if(!scannerActivo && !queryScannerActivo && 
-               document.getElementById('master-panel').style.display !== 'block' && 
-               document.getElementById('face-modal').style.display !== 'flex' &&
-               document.getElementById('login-modal').style.display !== 'flex') {
-                
-                idleTimeout = setTimeout(() => {
-                    mostrarVista('home-view');
-                }, IDLE_TIME);
-            }
-        }
-
-        ['mousemove', 'touchstart', 'click', 'keydown', 'scroll'].forEach(evt => {
-            document.addEventListener(evt, resetIdleTimer);
-        });
-
-        function updateIdleClock() {
-            const now = new Date();
-            let h = now.getHours(); let m = now.getMinutes();
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12; h = h ? h : 12;
-            m = m < 10 ? '0' + m : m;
-            const clockEl = document.getElementById('home-clock-time');
-            if(clockEl) clockEl.innerText = h + ':' + m + ' ' + ampm;
-            setTimeout(updateIdleClock, 5000);
-        }
-        updateIdleClock();
-
-        // ============================================
-        // SISTEMA AVANZADO DE SONIDOS MELÓDICOS (AudioContext)
-        // ============================================
-        function playSuccessSound() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                gain.gain.setValueAtTime(0.08, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.12);
-                
-                setTimeout(() => {
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime);
-                    gain2.gain.setValueAtTime(0.08, ctx.currentTime);
-                    osc2.start();
-                    osc2.stop(ctx.currentTime + 0.18);
-                }, 120);
-            } catch(e) { console.log("Audio Web no soportado."); }
-        }
-
-        function playParentMelody() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [523.25, 659.25, 783.99, 1046.50];
-                const times = [0, 100, 200, 300];
-                
-                notes.forEach((freq, idx) => {
-                    setTimeout(() => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                        gain.gain.setValueAtTime(0.07, ctx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-                        osc.start();
-                        osc.stop(ctx.currentTime + 0.35);
-                    }, times[idx]);
-                });
-            } catch(e) { console.log("Audio Web no soportado."); }
-        }
-
-        function playErrorSound() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, ctx.currentTime);
-                gain.gain.setValueAtTime(0.12, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.45);
-            } catch(e) { console.log("Audio Web no soportado."); }
-        }
-
-        // ============================================
-        // CÁLCULO DE DISTANCIA (FÓRMULA HAVERSINE)
-        // ============================================
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371000;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; 
-        }
-
-        // ============================================
-        // ESTADO DE INTELIGENCIA ARTIFICIAL Y EMOCIONES
-        // ============================================
-        let iaCargada = false;
-        let faceMatcher = null;
-        let scannerActivo = false;
-        let queryScannerActivo = false;
-        let enCooldown = false;
-        let streamActual = null;
-        let idCapturaActual = null;
-        let tipoCapturaActual = 'estudiante'; 
-        let descriptorDetectado = null;
-        let registroLoopId = null;
-
-        async function inicializarIA() {
-            if(iaCargada) return;
-            actualizarEstadoIA("Descargando modelos biométricos y de emociones (10MB)... Espera.");
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-            try {
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-                ]);
-                iaCargada = true;
-                actualizarEstadoIA("✅ Inteligencia Artificial (y Emociones) Lista");
-                construirFaceMatcher();
-            } catch (err) {
-                console.error(err);
-                actualizarEstadoIA("❌ Error cargando IA. Revisa tu conexión.");
-            }
-        }
-
-        function actualizarEstadoIA(msg) {
-            const el1 = document.getElementById('scan-ai-status');
-            const el2 = document.getElementById('query-ai-status');
-            const el3 = document.getElementById('admin-ai-status');
-            if(el1) el1.innerText = msg;
-            if(el2) el2.innerText = msg;
-            if(el3) el3.innerText = msg;
-        }
-
-        function construirFaceMatcher() {
-            if(!iaCargada) return;
-            const labeledDescriptors = [];
-            for (const id in db.personas) {
-                const persona = db.personas[id];
-                if (persona.descriptor && persona.descriptor.length === 128) {
-                    const floatArray = new Float32Array(persona.descriptor);
-                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id, [floatArray]));
-                }
-                if (persona.descriptorPadre1 && persona.descriptorPadre1.length === 128) {
-                    const floatArrayP1 = new Float32Array(persona.descriptorPadre1);
-                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id + "_p1", [floatArrayP1]));
-                }
-                if (persona.descriptorPadre2 && persona.descriptorPadre2.length === 128) {
-                    const floatArrayP2 = new Float32Array(persona.descriptorPadre2);
-                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id + "_p2", [floatArrayP2]));
-                }
-            }
-            if (labeledDescriptors.length > 0) {
-                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
-            } else {
-                faceMatcher = null;
-            }
-        }
-
-        // ============================================
-        // REGISTRO DE USUARIOS (MULTI-PERFIL / FUSIÓN IA)
-        // ============================================
-        let regDescriptors = [];
-        let regPhase = 0;
-        let regStream = null;
-
-        function toggleStudentField() {
-            const role = document.getElementById('regRole').value;
-            const studentInput = document.getElementById('regStudentId');
-            if(role === 'Padre/Encargado') { studentInput.style.display = 'block'; } 
-            else { studentInput.style.display = 'none'; studentInput.value = ''; }
-        }
-
-        async function iniciarCamaraRegistro() {
-            const id = document.getElementById('regId').value.trim();
-            const nombre = document.getElementById('regName').value.trim();
-            const rol = document.getElementById('regRole').value;
-            
-            if(!id || !nombre || !rol) { alert("Por favor, complete su Identificación, Nombre y Perfil antes de iniciar la cámara."); return; }
-            
-            if(!iaCargada) {
-                document.getElementById('reg-instructions').innerText = "Descargando modelos de IA, por favor espere...";
-                await inicializarIA();
-            }
-            
-            regDescriptors = [];
-            regPhase = 1;
-            
-            const btnCapture = document.getElementById('btnCaptureProfile');
-            btnCapture.innerText = "📸 Capturar Frente (0/4)";
-            btnCapture.disabled = false;
-            
-            const inst = document.getElementById('reg-instructions');
-            inst.innerText = "Paso 1: Mire fijamente a la cámara y presione Capturar.";
-            inst.style.color = "var(--accent-primary)";
-            
-            try {
-                regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                const video = document.getElementById('reg-video-pub');
-                video.srcObject = regStream;
-                document.getElementById('reg-cam-container').classList.add('active', 'scanning');
-                video.addEventListener('play', loopRegPub);
-            } catch (e) { alert("Error al acceder a la cámara. Verifique los permisos del navegador."); }
-        }
-
-        async function loopRegPub() {
-            const video = document.getElementById('reg-video-pub');
-            const canvas = document.getElementById('reg-canvas-pub');
-            if(!regStream || video.paused || video.ended) return;
-            
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(canvas, displaySize);
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            
-            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if(detection) {
-                const resized = faceapi.resizeResults(detection, displaySize);
-                faceapi.draw.drawDetections(canvas, resized);
-                faceapi.draw.drawFaceLandmarks(canvas, resized);
-                window.currentRegDescriptor = Array.from(detection.descriptor); 
-            } else {
-                window.currentRegDescriptor = null;
-            }
-            
-            setTimeout(loopRegPub, 150);
-        }
-
-        function capturarPerfilRegistro() {
-            if(!window.currentRegDescriptor) {
-                alert("Rostro no detectado con claridad. Asegúrese de tener buena iluminación y mirar hacia la cámara.");
-                playErrorSound();
-                return;
-            }
-            
-            playSuccessSound(); 
-            regDescriptors.push(window.currentRegDescriptor);
-            regPhase++;
-            
-            const btn = document.getElementById('btnCaptureProfile');
-            const inst = document.getElementById('reg-instructions');
-            
-            if(regPhase === 2) {
-                btn.innerText = "📸 Capturar Izquierda (1/4)";
-                inst.innerText = "Paso 2: Gire levemente su rostro a la IZQUIERDA y presione Capturar.";
-            } else if(regPhase === 3) {
-                btn.innerText = "📸 Capturar Derecha (2/4)";
-                inst.innerText = "Paso 3: Gire levemente su rostro a la DERECHA y presione Capturar.";
-            } else if(regPhase === 4) {
-                btn.innerText = "📸 Capturar Sonrisa/Arriba (3/4)";
-                inst.innerText = "Paso 4: Sonría o mire levemente hacia ARRIBA y presione Capturar.";
-            } else if(regPhase === 5) {
-                btn.innerText = "✅ Capturas Completas (4/4)";
-                btn.disabled = true;
-                btn.classList.replace('btn-m', 'btn-s');
-                
-                inst.innerText = "¡Excelente! 4 perfiles biométricos capturados. Ahora haga clic en Guardar Registro.";
-                inst.style.color = "var(--accent-success)";
-                
-                document.getElementById('btnSaveRegistry').disabled = false;
-                
-                if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
-                document.getElementById('reg-cam-container').classList.remove('active', 'scanning');
-            }
-        }
-
-        function guardarRegistroCompleto() {
-            const id = document.getElementById('regId').value.trim();
-            const nombre = document.getElementById('regName').value.trim();
-            const rol = document.getElementById('regRole').value;
-            const section = document.getElementById('regSection').value.trim();
-            const phone = document.getElementById('regPhone').value.trim();
-            const studentId = document.getElementById('regStudentId').value.trim();
-            
-            let avgDesc = new Float32Array(128);
-            for(let i=0; i<128; i++) {
-                let sum = 0;
-                for(let j=0; j<4; j++) { sum += regDescriptors[j][i]; }
-                avgDesc[i] = sum / 4;
-            }
-            
-            const finalDescArray = Array.from(avgDesc);
-            
-            const newUser = {
-                nombre: nombre,
-                puesto: section,
-                telefono: phone,
-                tipoUsuario: rol,
-                descriptor: finalDescArray
-            };
-            
-            const userPath = getUserPath();
-            if (userPath) {
-                database.ref(`${userPath}/personas/${id}`).update(newUser);
-            }
-            
-            if (rol === 'Padre/Encargado' && studentId) {
-                if (db.personas[studentId]) {
-                    const stu = db.personas[studentId];
-                    if (!stu.descriptorPadre1) {
-                        if (userPath) {
-                            database.ref(`${userPath}/personas/${studentId}/descriptorPadre1`).set(finalDescArray);
-                        }
-                    } else {
-                        if (userPath) {
-                            database.ref(`${userPath}/personas/${studentId}/descriptorPadre2`).set(finalDescArray);
-                        }
-                    }
-                    alert(`✅ Registro exitoso.\n\nSe ha creado su perfil y además se ha enlazado automáticamente como encargado del estudiante con cédula ${studentId}.`);
-                } else {
-                    alert("⚠️ Su registro facial ha sido guardado exitosamente.\n\nSin embargo, el ID del estudiante proporcionado no existe en el sistema. Deberá solicitar a administración que realice el enlace manualmente.");
-                }
-            } else {
-                alert("✅ Registro completado y almacenado exitosamente en la nube con tecnología multi-perfil.");
-            }
-            
-            document.getElementById('regId').value = '';
-            document.getElementById('regName').value = '';
-            document.getElementById('regRole').value = '';
-            document.getElementById('regSection').value = '';
-            document.getElementById('regPhone').value = '';
-            document.getElementById('regStudentId').value = '';
-            document.getElementById('regStudentId').style.display = 'none';
-            document.getElementById('btnSaveRegistry').disabled = true;
-            document.getElementById('btnCaptureProfile').classList.replace('btn-s', 'btn-m');
-            document.getElementById('reg-instructions').innerText = "Llene sus datos personales y presione '1️⃣ Iniciar Cámara'.";
-            document.getElementById('reg-instructions').style.color = "var(--accent-warning)";
-            
-            cerrarVistaProtegida('register-view');
-            construirFaceMatcher();
-        }
-
-        // ============================================
-        // REGISTRO DE ASISTENCIA (GEOLOCALIZADA Y EMOCIONES)
-        // ============================================
-        function registrarAsistenciaConGPS(id, strEmocion = "Neutral", emoticon = "😐") {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    const latDisp = pos.coords.latitude;
-                    const lngDisp = pos.coords.longitude;
-                    const precision = pos.coords.accuracy;
-                    
-                    // VALIDACIÓN ESTRICTA DE PRECISIÓN DE GPS (Arquitectura SDD)
-                    if(precision > 100) {
-                        mostrarMensajeTemp("⚠️ Baja precisión de GPS (" + Math.round(precision) + "m). Múevase o intente de nuevo.", "var(--accent-danger)");
-                        playErrorSound();
-                        if(scannerActivo) toggleScanner();
-                        return;
-                    }
-
-                    const dist = calcularDistancia(latDisp, lngDisp, geoConfig.lat, geoConfig.lng);
-                    const hISO = new Date().toLocaleDateString('sv-SE');
-                    const esLejano = dist > geoConfig.radio;
-
-                    if (esLejano) {
-                        const userPath = getUserPath();
-                        if (userPath) {
-                            database.ref(`${userPath}/logs_lejanos`).push({
-                                id: id,
-                                nombre: db.personas[id]?.nombre || "Desconocido",
-                                hora: new Date().toLocaleString(),
-                                fechaISO: hISO,
-                                distancia: Math.round(dist),
-                                lat: latDisp,
-                                lng: lngDisp
-                            });
-                        }
-                        
-                        mostrarMensajeTemp("⚠️ Fuera del rango. Escaneo detectado (" + Math.round(dist) + "m) pero NO registrado.", "var(--accent-danger)");
-                        playErrorSound();
-                        
-                        if(scannerActivo) toggleScanner();
-                        return; 
-                    }
-
-                    completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon);
-                }, (err) => {
-                    console.log("No se pudo obtener geolocalización:", err.message);
-                    completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0, strEmocion, emoticon);
-                }, { enableHighAccuracy: true, timeout: 5000 });
-            } else {
-                completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0, strEmocion, emoticon);
-            }
-        }
-
-        function completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon) {
-            const marcas = logsGlobal.filter(l => (l.fechaISO ? l.fechaISO === hISO : coincideFecha(l.hora, hISO)) && l.id === id && l.tipo !== 'JUSTIFICADA');
-            const tieneE = marcas.some(l => l.tipo === 'ENTRADA');
-            const tieneS = marcas.some(l => l.tipo === 'SALIDA');
-            
-            let tipo = "";
-            if (!tieneE) tipo = "ENTRADA"; 
-            else if (!tieneS) tipo = "SALIDA"; 
-            else { 
-                mostrarMensajeTemp("Ya registró Entrada y Salida hoy.", "var(--accent-warning)"); 
-                if(scannerActivo) toggleScanner();
-                return; 
-            }
-            
-            const userPath = getUserPath();
-            if (userPath) {
-                database.ref(`${userPath}/logs`).push({ 
-                    id: id, 
-                    nombre: db.personas[id].nombre, 
-                    hora: new Date().toLocaleString(), 
-                    fechaISO: hISO, 
-                    tipo: tipo,
-                    lejano: esLejano,
-                    distanciaMetros: esLejano ? Math.round(dist) : 0,
-                    emocion: strEmocion,
-                    emoticon: emoticon
-                });
-            }
-            
-            playSuccessSound();
-
-            const res = document.getElementById('resBox'); 
-            res.style.display = 'block'; 
-            res.style.background = tipo === "ENTRADA" ? "rgba(0, 255, 136, 0.1)" : "rgba(255, 68, 68, 0.1)";
-            
-            document.getElementById('resNombre').innerHTML = "✅ " + db.personas[id].nombre; 
-            document.getElementById('resMov').innerHTML = (tipo === "ENTRADA" ? "Entrada" : "Salida") + ` Registrada <span style="font-size:1.5rem;" title="${strEmocion}">${emoticon}</span>`;
-            
-            if(scannerActivo) toggleScanner();
-
-            setTimeout(() => { res.style.display = 'none'; }, 5000);
-        }
-
-        function mostrarMensajeTemp(msg, color) {
-            const status = document.getElementById('scan-ai-status');
-            if(status) {
-                const old = status.innerText; status.innerText = msg; status.style.color = color;
-                setTimeout(() => { status.innerText = old; status.style.color = "var(--accent-warning)"; }, 4500);
-            }
-        }
-
-        // ============================================
-        // ESCÁNER FACIAL PARA ASISTENCIA CON EMOCIONES
-        // ============================================
-        async function toggleScanner() {
-            const container = document.getElementById('scan-video-container');
-            const btn = document.getElementById('btnCamaraMain');
-
-            if (!scannerActivo) {
-                if(!iaCargada) { btn.innerText = "⏳ Cargando IA..."; await inicializarIA(); }
-                if(!faceMatcher) { alert("No hay rostros registrados aún."); return; }
-                try {
-                    streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    const video = document.getElementById('scan-video');
-                    video.srcObject = streamActual;
-                    container.classList.add('active', 'scanning');
-                    btn.innerText = "🛑 Detener Escáner"; btn.classList.replace('btn-i', 'btn-d');
-                    scannerActivo = true;
-                    video.addEventListener('play', loopReconocimiento);
-                    actualizarEstadoIA("👁️ Escáner Activo. Alumno/Personal mire a la cámara.");
-                    resetIdleTimer();
-                } catch (err) { alert("Error al acceder a la cámara."); }
-            } else {
-                detenerCamaras();
-                container.classList.remove('active', 'scanning');
-                btn.innerText = "🟢 Iniciar Escáner"; btn.classList.replace('btn-d', 'btn-i');
-                scannerActivo = false; actualizarEstadoIA("IA en espera.");
-                resetIdleTimer();
-            }
-        }
-
-        async function loopReconocimiento() {
-            if(!scannerActivo) return;
-            const video = document.getElementById('scan-video'); const canvas = document.getElementById('scan-canvas');
-            if(video.paused || video.ended) return setTimeout(loopReconocimiento, 100);
-
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(canvas, displaySize);
-            
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptor();
-            
-            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if(detection) {
-                const resized = faceapi.resizeResults(detection, displaySize);
-                const box = resized.detection.box;
-                ctx.strokeStyle = "rgba(0, 217, 255, 0.7)"; ctx.lineWidth = 2; ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-                if(faceMatcher && !enCooldown) {
-                    const match = faceMatcher.findBestMatch(detection.descriptor);
-                    
-                    if(match.label !== 'unknown' && !match.label.includes('_p')) {
-                        // Determinar Emoción Principal
-                        let emotionStr = "Neutral";
-                        let emoticon = "😐";
-                        if(detection.expressions) {
-                            const exp = detection.expressions;
-                            const maxE = Object.keys(exp).reduce((a, b) => exp[a] > exp[b] ? a : b);
-                            if(maxE === 'happy') { emoticon = "😄"; emotionStr = "Feliz"; }
-                            else if(maxE === 'sad') { emoticon = "😢"; emotionStr = "Triste"; }
-                            else if(maxE === 'angry') { emoticon = "😡"; emotionStr = "Enojado"; }
-                            else if(maxE === 'surprised') { emoticon = "😲"; emotionStr = "Sorprendido"; }
-                            else if(maxE === 'fearful') { emoticon = "😨"; emotionStr = "Asustado"; }
-                        }
-
-                        ctx.fillStyle = "rgba(0, 255, 136, 0.8)"; ctx.font = "16px Arial";
-                        ctx.fillText(`${emoticon} ${db.personas[match.label]?.nombre || match.label}`, box.x, box.y - 10);
-                        
-                        enCooldown = true;
-                        registrarAsistenciaConGPS(match.label, emotionStr, emoticon);
-                        setTimeout(() => { enCooldown = false; }, 4000); 
-                    } else if(match.label !== 'unknown' && match.label.includes('_p')) {
-                        ctx.fillStyle = "rgba(255, 184, 0, 0.8)"; ctx.font = "14px Arial";
-                        ctx.fillText("Rostro de encargado (No registra asistencia aquí)", box.x, box.y - 10);
-                    } else {
-                        ctx.fillStyle = "rgba(255, 68, 68, 0.8)"; ctx.font = "16px Arial"; ctx.fillText("Desconocido", box.x, box.y - 10);
-                    }
-                }
-            }
-            setTimeout(loopReconocimiento, 150);
-        }
-
-        // ============================================
-        // ESCÁNER INTELIGENTE PARA VISTA DE CONSULTA
-        // ============================================
-        async function toggleQueryScanner() {
-            const container = document.getElementById('query-video-container');
-            const btn = document.getElementById('btnCamaraQuery');
-
-            if (!queryScannerActivo) {
-                if(!iaCargada) { btn.innerText = "⏳ Cargando IA..."; await inicializarIA(); }
-                if(!faceMatcher) { alert("No hay rostros registrados para consultar."); return; }
-                try {
-                    streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    const video = document.getElementById('query-video');
-                    video.srcObject = streamActual;
-                    container.classList.add('active', 'scanning');
-                    btn.innerText = "🛑 Detener Consulta Facial"; btn.classList.replace('btn-m', 'btn-d');
-                    queryScannerActivo = true;
-                    video.addEventListener('play', loopConsultaFacial);
-                    actualizarEstadoIA("👁️ Analizando rostro...");
-                    resetIdleTimer();
-                } catch (err) { alert("Error al acceder a la cámara."); }
-            } else {
-                detenerCamaras();
-                container.classList.remove('active', 'scanning');
-                btn.innerText = "📷 Iniciar Consulta por Rostro"; btn.classList.replace('btn-d', 'btn-m');
-                queryScannerActivo = false;
-                resetIdleTimer();
-            }
-        }
-
-        async function loopConsultaFacial() {
-            if(!queryScannerActivo) return;
-            const video = document.getElementById('query-video'); const canvas = document.getElementById('query-canvas');
-            if(video.paused || video.ended) return setTimeout(loopConsultaFacial, 100);
-
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(canvas, displaySize);
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            
-            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if(detection) {
-                const resized = faceapi.resizeResults(detection, displaySize);
-                const box = resized.detection.box;
-                ctx.strokeStyle = "rgba(0, 217, 255, 0.7)"; ctx.lineWidth = 2; ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-                if(faceMatcher && !enCooldown) {
-                    const match = faceMatcher.findBestMatch(detection.descriptor);
-                    const distance = match.distance; 
-
-                    if(match.label !== 'unknown') {
-                        enCooldown = true;
-                        
-                        const exactitudSuficiente = distance < 0.35;
-
-                        if (match.label.includes('_p1') || match.label.includes('_p2')) {
-                            const idEstudiante = match.label.split('_')[0];
-                            const nombreEstudiante = db.personas[idEstudiante]?.nombre || "";
-
-                            playParentMelody();
-
-                            if (exactitudSuficiente) {
-                                ctx.fillStyle = "rgba(0, 255, 136, 0.9)"; ctx.font = "14px Arial";
-                                ctx.fillText(`✅ Encargado Autorizado (>95%)`, box.x, box.y - 25);
-                                ctx.fillText(`Ingresando a: ${nombreEstudiante}`, box.x, box.y - 10);
-                                
-                                setTimeout(() => {
-                                    toggleQueryScanner();
-                                    ejecutarConsultaIdDirecta(idEstudiante);
-                                }, 1500);
-                            } else {
-                                ctx.fillStyle = "rgba(255, 184, 0, 0.9)"; ctx.font = "14px Arial";
-                                ctx.fillText(`⚠️ Encargado Identificado`, box.x, box.y - 25);
-                                ctx.fillText(`Digite la cédula del alumno por seguridad`, box.x, box.y - 10);
-                                
-                                setTimeout(() => {
-                                    toggleQueryScanner();
-                                    let idPrompt = prompt("Rostro de encargado reconocido. Por seguridad, digite la cédula del estudiante:");
-                                    if(idPrompt && idPrompt.trim() === idEstudiante) {
-                                        ejecutarConsultaIdDirecta(idEstudiante);
-                                    } else {
-                                        alert("Validación incorrecta. No coincide el código proporcionado.");
-                                    }
-                                }, 1500);
-                            }
-                        } else {
-                            playSuccessSound();
-                            ctx.fillStyle = "rgba(0, 217, 255, 0.9)"; ctx.font = "14px Arial";
-                            ctx.fillText(`✅ Perfil: ${db.personas[match.label]?.nombre}`, box.x, box.y - 10);
-                            
-                            setTimeout(() => {
-                                toggleQueryScanner();
-                                ejecutarConsultaIdDirecta(match.label);
-                            }, 1500);
-                        }
-
-                        setTimeout(() => { enCooldown = false; }, 4000);
-                    } else {
-                        ctx.fillStyle = "rgba(255, 68, 68, 0.8)"; ctx.font = "16px Arial"; ctx.fillText("Rostro no reconocido", box.x, box.y - 10);
-                    }
-                }
-            }
-            setTimeout(loopConsultaFacial, 150);
-        }
-
-        function detenerCamaras() {
-            if (streamActual) { streamActual.getTracks().forEach(track => track.stop()); streamActual = null; }
-            if (regStream) { regStream.getTracks().forEach(track => track.stop()); regStream = null; }
-            clearTimeout(registroLoopId);
-        }
-
-        // ============================================
-        // REGISTRO FACIAL - ADMIN 
-        // ============================================
-        async function abrirRegistroRostro(id, tipo = 'estudiante') {
-            if(!iaCargada) await inicializarIA();
-            idCapturaActual = id;
-            tipoCapturaActual = tipo;
-            const persona = db.personas[id];
-            
-            let etiquetaRostro = "Rostro Propio del Usuario";
-            if(tipo === 'padre1') etiquetaRostro = "Rostro de Encargado Autorizado 1";
-            if(tipo === 'padre2') etiquetaRostro = "Rostro de Encargado Autorizado 2";
-
-            document.getElementById('modalFaceTitle').innerText = `📸 ${etiquetaRostro}`;
-            document.getElementById('modal-student-name').innerText = `${persona.nombre} (${id})`;
-            document.getElementById('face-modal').style.display = 'flex';
-            document.getElementById('btnCaptureFace').disabled = true;
-            document.getElementById('reg-status').innerText = "Buscando rostro..."; document.getElementById('reg-status').style.color = "var(--accent-warning)";
-            try {
-                streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                const video = document.getElementById('reg-video'); video.srcObject = streamActual;
-                video.addEventListener('play', loopCapturaAdmin);
-                resetIdleTimer();
-            } catch (err) { alert("Error con la cámara."); cerrarFaceModal(); }
-        }
-
-        async function loopCapturaAdmin() {
-            const video = document.getElementById('reg-video'); const canvas = document.getElementById('reg-canvas');
-            if(!streamActual || video.paused || video.ended) return;
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(canvas, displaySize);
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const btn = document.getElementById('btnCaptureFace'); const status = document.getElementById('reg-status');
-
-            if(detection) {
-                const resized = faceapi.resizeResults(detection, displaySize);
-                faceapi.draw.drawDetections(canvas, resized); faceapi.draw.drawFaceLandmarks(canvas, resized);
-                descriptorDetectado = Array.from(detection.descriptor);
-                btn.disabled = false; status.innerText = "✅ Rostro detectado. ¡Puede guardar!"; status.style.color = "var(--accent-success)";
-            } else {
-                descriptorDetectado = null; btn.disabled = true; status.innerText = "Mire a la cámara..."; status.style.color = "var(--accent-warning)";
-            }
-            registroLoopId = setTimeout(loopCapturaAdmin, 200);
-        }
-
-        function capturarYGuardarRostro() {
-            if(idCapturaActual && descriptorDetectado) {
-                const userPath = getUserPath();
-                if (userPath) {
-                    if (tipoCapturaActual === 'estudiante') {
-                        db.personas[idCapturaActual].descriptor = descriptorDetectado;
-                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptor`).set(descriptorDetectado);
-                    } else if (tipoCapturaActual === 'padre1') {
-                        db.personas[idCapturaActual].descriptorPadre1 = descriptorDetectado;
-                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptorPadre1`).set(descriptorDetectado);
-                    } else if (tipoCapturaActual === 'padre2') {
-                        db.personas[idCapturaActual].descriptorPadre2 = descriptorDetectado;
-                        database.ref(`${userPath}/personas/${idCapturaActual}/descriptorPadre2`).set(descriptorDetectado);
-                    }
-                }
-                alert("Rostro facial guardado exitosamente en la nube.");
-                cerrarFaceModal(); construirFaceMatcher();
-            }
-        }
-        function cerrarFaceModal() { document.getElementById('face-modal').style.display = 'none'; detenerCamaras(); idCapturaActual = null; descriptorDetectado = null; resetIdleTimer(); }
-
-        // ============================================
-        // FUNCIONES DE ADMINISTRADOR Y TABLAS
-        // ============================================
-        function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hISO = new Date().toLocaleDateString('sv-SE');
-            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO ? l.fechaISO === hISO : coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
-            
-            Object.entries(db.personas).forEach(([id, p]) => {
-                const isP = pres.includes(id);
-                const tieneRostroEst = p.descriptor && p.descriptor.length === 128;
-                
-                let tipoUserHtml = `<span class="status-badge" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-light);">${p.tipoUsuario || 'Estudiante'}</span>`;
-
-                t.insertAdjacentHTML('beforeend', `
-                    <tr>
-                        <td><span class="status-badge ${isP ? 'status-in' : 'status-none'}">${isP ? '✓' : '✗'}</span></td>
-                        <td><b>${id}</b></td>
-                        <td>${tipoUserHtml}</td>
-                        <td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.nombre || ''}" onchange="db.personas['${id}'].nombre=this.value"></td>
-                        <td><input style="border:none;background:transparent;color:var(--text-secondary);font-weight:bold;width:100%" value="${p.puesto || ''}" onchange="db.personas['${id}'].puesto=this.value"></td>
-                        <td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.telefono || ''}" onchange="db.personas['${id}'].telefono=this.value"></td>
-                        <td>
-                            <button class="btn ${tieneRostroEst ? 'btn-m' : 'btn-dark'}" style="padding:4px 8px; font-size:0.75rem;" onclick="abrirRegistroRostro('${id}', 'estudiante')">
-                                ${tieneRostroEst ? '👤 Configurado' : '📸 Configurar'}
-                            </button>
-                        </td>
-                        <td>
-                            <div style="display:flex; flex-direction:column; gap:4px;">
-                                <button class="btn ${p.descriptorPadre1 ? 'btn-s' : 'btn-dark'}" style="padding:2px 6px; font-size:0.7rem; text-transform:none;" onclick="abrirRegistroRostro('${id}', 'padre1')">
-                                    👨‍👦 Encargado 1: ${p.descriptorPadre1 ? '✓' : '✗'}
-                                </button>
-                                <button class="btn ${p.descriptorPadre2 ? 'btn-s' : 'btn-dark'}" style="padding:2px 6px; font-size:0.7rem; text-transform:none;" onclick="abrirRegistroRostro('${id}', 'padre2')">
-                                    👨‍👦 Encargado 2: ${p.descriptorPadre2 ? '✓' : '✗'}
-                                </button>
-                            </div>
-                        </td>
-                        <td class="no-print">
-                            <div style="display:flex; gap: 4px;">
-                                <button class="btn btn-s" style="padding:6px 10px;" onclick="enviarWA('${p.telefono || ''}')" title="WhatsApp">💬</button>
-                                <button class="btn btn-i" style="padding:6px 10px;" onclick="descargarCarnet('${id}')" title="Ver Carnet">📇</button>
-                                <button class="btn btn-d" style="padding:6px 10px;" onclick="if(confirm('¿Borrar usuario?')) { const userPath = getUserPath(); if (userPath) database.ref(userPath+'/personas/'+'${id}').remove(); }" title="Eliminar">🗑️</button>
-                            </div>
-                        </td>
-                    </tr>
-                `);
-            });
-        }
-
-        // TABLA: Historial de Escaneos Lejanos
-        function renderGeolocalizacion() {
-            const tbody = document.getElementById('tablaLogsLejanos');
-            tbody.innerHTML = "";
-            if (logsLejanosGlobal.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color: var(--text-muted);'>No hay reportes de escaneos lejanos.</td></tr>";
-                return;
-            }
-            logsLejanosGlobal.slice().reverse().forEach(log => {
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr>
-                        <td>${log.hora}</td>
-                        <td><b>${log.id}</b></td>
-                        <td>${log.nombre}</td>
-                        <td style="color: var(--accent-danger); font-weight:bold;">${log.distancia} metros fuera del rango</td>
-                        <td>${log.lat.toFixed(6)}, ${log.lng.toFixed(6)}</td>
-                        <td class="no-print">
-                            <div style="display:flex; gap: 5px;">
-                                <button class="btn btn-i" style="padding: 4px 8px; font-size: 0.75rem;" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${log.lat},${log.lng}', '_blank')">🗺️ Ver Mapa</button>
-                                <button class="btn btn-d" style="padding: 4px 8px; font-size: 0.75rem;" onclick="eliminarLogLejano('${log.key}')">🗑️ Eliminar</button>
-                            </div>
-                        </td>
-                    </tr>
-                `);
-            });
-        }
-
-        function eliminarLogLejano(key) {
-            if(confirm("¿Está seguro de que desea eliminar permanentemente este registro de escaneo lejano?")) {
-                const userPath = getUserPath();
-                if (userPath) {
-                    database.ref(`${userPath}/logs_lejanos/${key}`).remove();
-                    alert("Registro lejano eliminado con éxito.");
-                }
-            }
-        }
-
-        // --- Botones Superiores de Administración ---
-        function editarNumeroJunta() { let n = prompt("Número de contacto general para WhatsApp:", NUMERO_OFICIAL_JUNTA); if(n) { database.ref('config/numeroOficial').set(n); alert("Actualizado."); } }
-        
-        function procesarSubidaFondo(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width; let h = img.height;
-                    const maxW = 1920; 
-                    if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
-                    try {
-                        if (currentUserUID) {
-                            const bgKey = `CUSTOM_BG_${currentUserUID}`;
-                            localStorage.setItem(bgKey, dataUrl);
-                            document.body.style.backgroundImage = `url(${dataUrl})`;
-                        }
-                        alert('Fondo de pantalla actualizado con éxito desde su dispositivo.');
-                    } catch(err) {
-                        alert('La imagen es demasiado pesada para el navegador. Intente subir una foto de menor calidad.');
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function procesarSubidaLogo(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width; let h = img.height;
-                    const maxH = 200;
-                    if(h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    const dataUrl = canvas.toDataURL('image/png', 0.8);
-                    try {
-                        if (currentUserUID) {
-                            const logoKey = `CUSTOM_LOGO_${currentUserUID}`;
-                            localStorage.setItem(logoKey, dataUrl);
-                            cargarLogoPersonalizado();
-                        }
-                        alert('Logo institucional actualizado correctamente.');
-                    } catch(err) {
-                        alert('La imagen del logo excede el límite permitido. Intente con una imagen más liviana.');
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        function mostrarEstadisticas() { 
-            const total = Object.keys(db.personas).length; 
-            const presentes = logsGlobal.filter(l => l.tipo === 'ENTRADA' && (l.fechaISO === new Date().toLocaleDateString('sv-SE') || coincideFecha(l.hora, new Date().toLocaleDateString('sv-SE')))).length; 
-            alert(`ESTADÍSTICAS DEL DÍA:\n\nTotal Usuarios Registrados: ${total}\nPresentes (Entradas): ${presentes}\nAusentes: ${total - presentes}\n% de Asistencia/Tránsito: ${total>0?((presentes/total)*100).toFixed(1):0}%`); 
-        }
-
-        function mostrarConfiguracion() { 
-            let configDiv = document.createElement('div');
-            configDiv.innerHTML = `
-                <div style="text-align: left; font-family: sans-serif; line-height:1.6; color:#1e293b;">
-                    <h3 style="margin-bottom:10px; color:#00b8d4;">Preferencia de Tema</h3>
-                    <div style="margin-bottom:20px;">
-                        <button class="btn btn-m" onclick="setTheme('dark')">🌙 Modo Oscuro</button>
-                        <button class="btn btn-s" onclick="setTheme('light')">☀️ Modo Claro</button>
-                    </div>
-                    <hr style="margin: 15px 0;">
-                    <p><b>Institución:</b> ${currentSchoolName || 'Escuela La Carpio'}</p>
-                    <p><b>Licencia:</b> prodigital-72284602</p>
-                    <p><b>Versión:</b> Sistema Facial Inteligente 3.5 (SDD Architecture)</p>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold">● CONECTADO</span>
+                    <button onclick="handleLogout()" class="bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-400 px-4 py-2.5 rounded-xl text-xs font-black transition-all border border-slate-700"><i data-lucide="log-out" class="w-4 h-4"></i> Salir</button>
                 </div>
-            `;
-            let win = window.open("", "Configuración de Sistema", "width=400,height=300");
-            win.document.write(`<html><head><title>Configuración</title><style>body{font-family:sans-serif; padding:20px; background:#f0f4f8;}.btn{padding:8px 12px; margin-right:5px; cursor:pointer; font-weight:bold; border-radius:5px; border:none;} .btn-m{background:#00d9ff;} .btn-s{background:#00ff88;}</style></head><body>`);
-            win.document.write(configDiv.innerHTML);
-            win.document.write(`<script>
-                function setTheme(theme) {
-                    window.opener.setSystemTheme(theme);
-                    window.close();
-                }
-            <\/script></body></html>`);
-            win.document.close();
-        }
+            </div>
+        </header>
 
-        function setSystemTheme(theme) {
-            if (theme === 'light') {
-                document.body.classList.add('light-theme');
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.body.classList.remove('light-theme');
-                localStorage.setItem('theme', 'dark');
-            }
-        }
+        <main class="max-w-7xl mx-auto p-4 md:p-8 w-full flex-1">
+            <!-- MÉTRICAS GENERALES -->
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-[#0f172a]/50 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4"><div class="bg-cyan-500/10 p-3.5 rounded-xl text-cyan-400"><i data-lucide="server" class="w-6 h-6"></i></div><div><div class="text-2xl font-black text-white" id="stat-total">0</div><p class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Total de Escuelas</p></div></div>
+                <div class="bg-[#0f172a]/50 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4"><div class="bg-emerald-500/10 p-3.5 rounded-xl text-emerald-400"><i data-lucide="check-circle" class="w-6 h-6"></i></div><div><div class="text-2xl font-black text-white" id="stat-active">0</div><p class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Servicios Activos</p></div></div>
+                <div class="bg-[#0f172a]/50 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4"><div class="bg-red-500/10 p-3.5 rounded-xl text-red-400"><i data-lucide="alert-octagon" class="w-6 h-6"></i></div><div><div class="text-2xl font-black text-white" id="stat-blocked">0</div><p class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Bloqueados/Morosos</p></div></div>
+                <div class="bg-[#0f172a]/50 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4"><div class="bg-indigo-500/10 p-3.5 rounded-xl text-indigo-400"><i data-lucide="wallet" class="w-6 h-6"></i></div><div><div class="text-2xl font-black text-indigo-300" id="stat-revenue">₡0</div><p class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Ingresos MRR</p></div></div>
+            </section>
 
-        function guardarConfigGeo() {
-            const lat = parseFloat(document.getElementById('geoLat').value);
-            const lng = parseFloat(document.getElementById('geoLng').value);
-            const radio = parseInt(document.getElementById('geoRadio').value);
-            if (isNaN(lat) || isNaN(lng) || isNaN(radio)) {
-                alert("Ingrese valores numéricos válidos.");
-                return;
-            }
-            geoConfig = { lat, lng, radio };
-            
-            const userPath = getUserPath();
-            if (userPath) {
-                database.ref(`${userPath}/config/geocerca`).set(geoConfig);
-            }
-            alert("Ubicación y Geocerca configuradas de forma exitosa.\n\nRecuerde: Ahora cualquier escaneo que exceda el radio será almacenado en el 'Historial Lejano' y su Asistencia Oficial será rechazada.");
-        }
-
-        // --- Barra de Herramientas Miembros ---
-        function agregarMiembroManual() { 
-            const id = prompt("Cédula/Código nuevo:"); 
-            if(id) { 
-                db.personas[id] = { 
-                    nombre: prompt("Nombre Completo:"), 
-                    puesto: prompt("Sección/Motivo:"), 
-                    telefono: prompt("WhatsApp:"),
-                    tipoUsuario: 'Estudiante'
-                }; 
-                renderAlumnos(); 
-            } 
-        }
-        function sincronizarConNube() { 
-            const userPath = getUserPath();
-            if (userPath) {
-                database.ref(`${userPath}/personas`).set(db.personas); 
-                alert("Datos guardados en la nube.");
-            }
-        }
-        
-        function importarCSV() { 
-            const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
-            r.onload = (e) => { 
-                e.target.result.split('\n').forEach((l, i) => { 
-                    if(i>0 && l.trim()){ 
-                        let c=l.split(','); 
-                        if(c[0]) {
-                            db.personas[c[0].trim()] = {
-                                nombre: c[1]?.trim() || '', 
-                                puesto: c[2]?.trim() || '', 
-                                telefono: c[3]?.trim() || '',
-                                tipoUsuario: c[4]?.trim() || 'Estudiante'
-                            }; 
-                        }
-                    } 
-                }); 
-                renderAlumnos(); 
-                alert("Base de datos importada exitosamente."); 
-            }; 
-            r.readAsText(f); 
-        }
-
-        function exportarCSV() { 
-            let csv = 'Código,Nombre,Sección,WhatsApp,Rol\n'; 
-            Object.entries(db.personas).forEach(([id, p]) => { 
-                csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''},${p.tipoUsuario || 'Estudiante'}\n`; 
-            }); 
-            const link = document.createElement('a'); 
-            link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); 
-            link.download = `Usuarios_Registrados_${new Date().toISOString().split('T')[0]}.csv`; 
-            link.click(); 
-        }
-        
-        function exportarPDFMiembros() {
-            const { jsPDF } = window.jspdf; 
-            const doc = new jsPDF();
-            
-            doc.text("Lista General de Usuarios Registrados", 14, 20);
-            
-            const bodyData = [];
-            Object.entries(db.personas).forEach(([id, p]) => {
-                let rostrosStatus = p.descriptor ? 'Usuario: Sí' : 'Usuario: No';
-                if(p.descriptorPadre1) rostrosStatus += ' / Encargado 1: Sí';
-                if(p.descriptorPadre2) rostrosStatus += ' / Encargado 2: Sí';
-                bodyData.push([id, p.tipoUsuario || 'Estudiante', p.nombre || '', p.puesto || '', p.telefono || '', rostrosStatus]);
-            });
-
-            doc.autoTable({ 
-                head: [['Código/Cédula', 'Rol', 'Nombre Completo', 'Sección/Dato', 'WhatsApp', 'Rostros IA']],
-                body: bodyData,
-                startY: 30,
-                theme: 'grid',
-                styles: { fontSize: 8 }
-            });
-            
-            doc.save(`Usuarios_${new Date().toLocaleDateString('sv-SE')}.pdf`);
-        }
-        
-        function duplicarMiembro() { 
-            const id = prompt('Código a duplicar:'); 
-            if(id && db.personas[id]) { 
-                const newId = prompt('Nuevo código para el duplicado:'); 
-                if(newId) { 
-                    db.personas[newId] = {...db.personas[id]}; 
-                    renderAlumnos(); 
-                    alert('Usuario duplicado'); 
-                } 
-            } 
-        }
-        function mostrarConfirmacionBorrar() { 
-            if(confirm('⚠️ ADVERTENCIA: ¿Borrar TODA la base de datos (Usuarios y Logs)?\n\nPresione OK para confirmar.')) { 
-                const userPath = getUserPath();
-                if (userPath) {
-                    database.ref(`${userPath}/personas`).remove(); 
-                    database.ref(`${userPath}/logs`).remove(); 
-                    database.ref(`${userPath}/logs_lejanos`).remove(); 
-                }
-                location.reload(); 
-            } 
-        }
-        
-        function enviarWA(tel) { 
-            if(!tel || tel==='') { 
-                alert("No hay número registrado para este usuario."); 
-                return;
-            } 
-            window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); 
-        }
-        function enviarWA_Ausente(tel, nombreEstudiante) {
-            if(!tel || tel==='') { 
-                alert("No hay número registrado para este usuario."); 
-                return;
-            } 
-            const msj = encodeURIComponent(`Hola, le escribimos de la ${currentSchoolName || 'Escuela'} para informarle que el usuario ${nombreEstudiante} se encuentra ausente o sin registro de ingreso el día de hoy.`);
-            window.open(`https://wa.me/506${tel.replace(/\D/g,'')}?text=${msj}`, '_blank');
-        }
-
-        function justificarAusencia(id, nombre) {
-            const hISO = document.getElementById('reportDate').value;
-            if(confirm(`¿Desea justificar la ausencia de ${nombre} para la fecha ${hISO}?`)) {
-                const userPath = getUserPath();
-                if (userPath) {
-                    database.ref(`${userPath}/logs`).push({ 
-                        id: id, 
-                        nombre: nombre, 
-                        hora: new Date().toLocaleString(), 
-                        fechaISO: hISO, 
-                        tipo: 'JUSTIFICADA',
-                        lejano: false,
-                        distanciaMetros: 0
-                    });
-                }
-                alert('La ausencia ha sido justificada con éxito. Se ha marcado con una ⭐.');
-            }
-        }
-
-        // --- Generación de Carnés QR ---
-        function descargarCarnet(id) {
-            const p = db.personas[id];
-            const win = window.open('','','width=350,height=500');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0a0e27;}.card{width:280px;height:420px;background:#1a1f3a;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);overflow:hidden;position:relative;border:1px solid #2a3250;}.header{background:#00d9ff;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0e27;text-align:center;font-weight:bold;}.qr-container{background:#1a1f3a;padding:15px;border-radius:10px;margin-top:20px;display:inline-block;border:1px solid #2a3250;}.info{padding:20px;text-align:center;color:#e8eef5;}.id-label{font-size:1.6rem;font-weight:900;color:#00d9ff;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#00d9ff 33%,#1a1f3a 33%,#1a1f3a 66%,#ff4444 66%);}</style></head><body><div class="card"><div class="header">${currentSchoolName || 'ESCUELA'}<br><span style="font-size:0.8rem; font-weight:normal;">${p.tipoUsuario || 'Estudiante'}</span></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#a8b2c1;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
-            win.document.close();
-        }
-
-        function imprimirTodosLosCarnets() {
-            const win = window.open('',''); 
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body><style>@media print { div { page-break-inside: avoid; } }</style>`);
-            Object.entries(db.personas).forEach(([id,p]) => { 
-                win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;font-family:sans-serif;"><div id="qr-${id.replace(/\W/g,'')}"></div><br><b style="font-size:1.2rem;">${id}</b><br>${p.nombre}<br><small>${p.tipoUsuario||'Estudiante'} - ${p.puesto||''}</small></div>`); 
-            });
-            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\\W/g,'')}\"),{text:"${id}",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
-            win.document.close();
-        }
-
-        // ============================================
-        // VISTAS Y REPORTES (SD ARCHITECTURE HOOKS)
-        // ============================================
-        function mostrarVista(id) { 
-            document.getElementById('home-view').style.display = (id==='home-view')?'flex':'none'; 
-            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; 
-            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; 
-            document.getElementById('register-view').style.display = (id==='register-view')?'flex':'none'; 
-            
-            if(id!=='scan-view' && scannerActivo) toggleScanner(); 
-            if(id!=='parent-view' && queryScannerActivo) toggleQueryScanner(); 
-            if(id!=='register-view' && regStream) { 
-                regStream.getTracks().forEach(t => t.stop()); 
-                regStream = null; 
-                document.getElementById('reg-cam-container').classList.remove('active', 'scanning');
-            }
-            resetIdleTimer();
-        }
-
-        function cerrarMaster() { 
-            document.getElementById('master-panel').style.display = 'none'; 
-            detenerCamaras(); 
-            resetIdleTimer(); 
-        }
-        function cerrarVistaProtegida(id) { 
-            document.getElementById(id).style.display = 'none'; 
-            mostrarVista('home-view'); 
-            detenerCamaras(); 
-        }
-        
-        function cambiarTab(n) { 
-            document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
-            document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; 
-            document.getElementById('sec-geolocalizacion').style.display = (n===3)?'block':'none'; 
-            
-            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; 
-            document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; 
-            document.getElementById('tab3').className = (n===3)?'tab-btn active':'tab-btn'; 
-        }
-        
-        function filtrarRapido() { 
-            let f = document.getElementById('busqueda').value.toUpperCase(); 
-            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); 
-            for (let i = 0; i < rows.length; i++) { 
-                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; 
-            } 
-        }
-
-        function consultarPadre() {
-            const id = document.getElementById('parentInput').value.trim();
-            ejecutarConsultaIdDirecta(id);
-        }
-
-        function ejecutarConsultaIdDirecta(id) {
-            if(!db.personas[id]) return alert("Usuario/Estudiante no encontrado en el sistema.");
-            const p = db.personas[id];
-            
-            document.getElementById('parentStudentName').innerText = p.nombre;
-            document.getElementById('parentStudentPuesto').innerText = (p.tipoUsuario || "Perfil") + " / " + (p.puesto || "N/A");
-            document.getElementById('btnConsultaWA').onclick = () => { 
-                const mensaje = `Hola, quisiera realizar una consulta sobre el usuario: ${p.nombre} (ID: ${id}).`;
-                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
-            };
-            
-            const userPath = getUserPath();
-            if (userPath) {
-                database.ref(`${userPath}/logs`).orderByChild('id').equalTo(id).once('value', (s) => {
-                    const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                    if(s.exists()){ 
-                        s.forEach(c => { 
-                            let l=c.val(); 
-                            let alertTag = l.lejano ? ` <span style="color:var(--accent-danger); font-size: 0.75rem;">(Lejos de Escuela: ${l.distanciaMetros}m)</span>` : "";
-                            let statusColor = l.tipo === 'ENTRADA' ? '#00ff88' : (l.tipo === 'SALIDA' ? '#ff4444' : '#ffb800');
-                            list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${statusColor}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
-                        }); 
-                    }
-                    else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros históricos o del día de hoy.</p>"; }
-                    document.getElementById('parentResult').style.display = 'block';
-                });
-            }
-        }
-
-        // FUNCIÓN NUEVA: Redirigir a vista de consulta específica desde la tabla TODOS
-        window.verHistorialPersona = function(id) {
-            document.getElementById('parentInput').value = id;
-            consultarPadre();
-            cerrarMaster();
-            mostrarVista('parent-view');
-        }
-
-        function limpiarConsultaPadres() {
-            document.getElementById('parentResult').style.display='none'; 
-            document.getElementById('parentInput').value='';
-            if(queryScannerActivo) toggleQueryScanner();
-        }
-
-        function coincideFecha(horaLog, fechaInputISO) {
-            if(!horaLog || !fechaInputISO) return false;
-            let [y, m, d] = fechaInputISO.split('-');
-            m = parseInt(m).toString(); d = parseInt(d).toString();
-            return horaLog.includes(`${m}/${d}/${y}`) || horaLog.includes(`${m.padStart(2,'0')}/${d}/${y}`) || horaLog.includes(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
-        }
-
-        // BORRAR DÍA (Actualizado para borrar estrictamente el input seleccionado)
-        function borrarHistorialDia() { 
-            const hISO = document.getElementById('reportDate').value;
-            if(!hISO) {
-                alert("Primero debe seleccionar una fecha en el calendario.");
-                return;
-            }
-            if(confirm(`⚠️ ATENCIÓN: ¿Está seguro de borrar TODOS los registros de asistencia del día ${hISO}? Esta acción es irreversible.`)) {
-                const registrosABorrar = logsGlobal.filter(l => l.fechaISO === hISO || coincideFecha(l.hora, hISO));
-                if(registrosABorrar.length === 0) {
-                    alert("No hay registros en la base de datos para este día.");
-                    return;
-                }
+            <!-- CREAR NUEVA ESCUELA -->
+            <section class="bg-[#0f172a]/50 border border-slate-800/80 p-6 md:p-8 rounded-3xl mb-8 shadow-2xl">
+                <h3 class="text-sm font-black mb-6 text-white uppercase tracking-wider flex items-center gap-2"><i data-lucide="plus-circle" class="text-cyan-400"></i> Desplegar Nueva Escuela/Sede</h3>
                 
-                const userPath = getUserPath();
-                if (userPath) {
-                    registrosABorrar.forEach(l => database.ref(`${userPath}/logs/${l.key}`).remove()); 
-                }
-                alert(`✅ Se eliminaron ${registrosABorrar.length} registros correspondientes al día ${hISO}.`);
-                filtrarVistaReporte('TODOS');
-            }
-        }
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- FORMULARIO -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <!-- DATOS DE DIRECTOR -->
+                        <div class="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+                            <h4 class="text-[10px] font-bold text-blue-400 uppercase mb-3 block">📋 Información del Director/Admin</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Completo Director</label><input type="text" id="new-director-name" placeholder="Juan García López" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Director/Escuela</label><input type="email" id="new-director-email" placeholder="director@escuela.com" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                                <div class="space-y-1 md:col-span-2"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">UID Firebase del Director</label><input type="text" id="new-director-uid" placeholder="abc123def456ghi789..." class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            </div>
+                        </div>
 
-        function filtrarVistaReporte(tipo) {
-            const fechaBuscada = document.getElementById('reportDate').value;
-            if(!fechaBuscada) return alert("Seleccione una fecha");
-            const cuerpo = document.getElementById('cuerpoReporte'); const head = document.getElementById('headReporte'); const titulo = document.getElementById('tituloReporte');
-            cuerpo.innerHTML = "";
-            let logsDelDia = logsGlobal.filter(l => l.fechaISO ? l.fechaISO === fechaBuscada : coincideFecha(l.hora, fechaBuscada));
+                        <!-- DATOS DE ESCUELA -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">ID Escuela (URL sin espacios)</label><input type="text" id="new-id" placeholder="ej: escuela-carpio" oninput="generateTenantUrl()" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Institución</label><input type="text" id="new-name" placeholder="Escuela La Carpio" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                        </div>
 
-            if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
-                titulo.innerText = tipo === 'ENTRADA' ? `✅ Llegaron` : `🚪 Salieron`;
-                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Sección</th><th>Emoción</th><th>Estado Distancia</th></tr>`;
-                logsDelDia.filter(l => l.tipo === tipo).forEach(l => {
-                    const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    let estDist = l.lejano ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
-                    let emoInfo = l.emoticon ? `<span style="font-size:1.2rem;" title="${l.emocion}">${l.emoticon}</span>` : '😐';
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
-                });
-            } else if(tipo === 'TODOS') {
-                titulo.innerText = `📋 Todos los Movimientos`;
-                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Tipo</th><th>Sección</th><th>Emoción</th><th>Estado Distancia</th></tr>`;
-                logsDelDia.filter(l => l.tipo !== 'JUSTIFICADA').forEach(l => {
-                    const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    let estDist = l.lejano ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
-                    let emoInfo = l.emoticon ? `<span style="font-size:1.2rem;" title="${l.emocion}">${l.emoticon}</span>` : '😐';
-                    // ENLACE DIRECTO AL HISTORIAL INDIVIDUAL DESDE LA TABLA
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td><a class="link-history" onclick="verHistorialPersona('${l.id}')">${l.nombre}</a></td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
-                });
-            } else {
-                titulo.innerText = `❌ Ausentes / ⭐ Justificados`;
-                head.innerHTML = `<tr><th>Estado</th><th>Identificación</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acción</th></tr>`;
-                const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-                const justificados = [...new Set(logsDelDia.filter(l => l.tipo === 'JUSTIFICADA').map(l => l.id))];
+                        <!-- URL GENERADA -->
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">🌐 URL Generada del Sitio</label>
+                            <div class="url-display"><span id="generated-url">https://prodigitalcr.github.io/TENANT-ESCUELA/?id=[id-escuela]</span><button type="button" class="copy-btn" onclick="copyUrl()">Copiar</button></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">WhatsApp Director/Admin</label><input type="text" id="new-tel" placeholder="50688888888" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Plan de Pago</label><select id="new-plan" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"><option value="Mensual">Mensual</option><option value="Trimestral">Trimestral (10% desc)</option><option value="Anual">Anual (20% desc)</option></select></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Cuota Mensual (₡)</label><input type="number" id="new-monto" placeholder="15000" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                        </div>
+
+                        <!-- GEO CONFIG -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+                            <div class="space-y-1 md:col-span-2"><label class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider ml-1">Latitud Centro Escuela</label><input type="number" step="any" id="new-lat" placeholder="9.9388" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider ml-1">Longitud</label><input type="number" step="any" id="new-lng" placeholder="-84.1200" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider ml-1">Radio Permitido (m)</label><input type="number" id="new-radio" value="150" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Próxima Fecha de Corte</label><input type="date" id="new-corte" class="w-full bg-[#080d1a] border border-slate-800 p-3.5 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                            <div class="flex items-end"><button onclick="createTenant()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black py-4 px-6 rounded-xl transition-all uppercase text-xs tracking-widest shadow-lg shadow-cyan-500/10"><i data-lucide="globe-2" class="w-4 h-4"></i> Desplegar Escuela</button></div>
+                        </div>
+                    </div>
+
+                    <!-- MAPA GEOCERCA -->
+                    <div class="lg:col-span-5 flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2">📍 Ubicar Centro en Mapa (Arrastra o Click)</label>
+                        <div id="map-creator" class="flex-1 min-h-[300px] w-full rounded-2xl border border-slate-800 overflow-hidden shadow-inner"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TABLA DE ESCUELAS -->
+            <section class="bg-[#0f172a]/50 border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl">
+                <div class="p-6 border-b border-slate-800/80 bg-slate-900/30">
+                    <h4 class="text-white font-black uppercase text-xs tracking-widest">🏫 Monitoreo de Escuelas Registradas</h4>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase mt-1">Control Centralizado y Estado de Suscripción</p>
+                </div>
                 
-                Object.entries(db.personas).forEach(([id, p]) => {
-                    if(!presentes.includes(id)) {
-                        const isJustificado = justificados.includes(id);
-                        const estadoTag = isJustificado ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Justificado</span>` : `<span style="color:var(--accent-danger); font-weight:bold;">❌ Ausente</span>`;
-
-                        cuerpo.insertAdjacentHTML('beforeend', `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-900/40 text-slate-500 text-[9px] uppercase font-bold border-b border-slate-800">
                             <tr>
-                                <td>${estadoTag}</td>
-                                <td><b>${id}</b></td>
-                                <td>${p.nombre}</td>
-                                <td>${p.puesto || '-'}</td>
-                                <td>${p.telefono || 'Sin teléfono'}</td>
-                                <td class="no-print" style="display:flex; gap: 5px;">
-                                    ${!isJustificado ? `<button class="btn btn-m" style="padding: 4px 8px; font-size: 0.75rem;" onclick="justificarAusencia('${id}', '${p.nombre}')">✅ Justificar</button>` : ''}
-                                    <button class="btn btn-s" style="padding: 4px 8px; font-size: 0.75rem;" onclick="enviarWA_Ausente('${p.telefono || ''}', '${p.nombre}')">💬 Msg</button>
-                                </td>
+                                <th class="p-5">Escuela / ID</th>
+                                <th class="p-5">Director</th>
+                                <th class="p-5">Geocerca</th>
+                                <th class="p-5">Plan / Contacto</th>
+                                <th class="p-5">Cuota</th>
+                                <th class="p-5 text-center">Estado SaaS</th>
+                                <th class="p-5 text-center">Acciones</th>
+                                <th class="p-5 text-right">Controles</th>
                             </tr>
-                        `);
-                    }
-                });
+                        </thead>
+                        <tbody id="tenant-list" class="divide-y divide-slate-800/40">
+                            <tr><td colspan="8" class="p-10 text-center text-slate-500 uppercase font-bold text-xs"><i data-lucide="loader" class="w-5 h-5 inline animate-spin mr-2"></i> Cargando escuelas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL DE GESTIÓN COMPLETA -->
+    <div id="manageModal" class="fixed inset-0 bg-[#02040a]/90 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+        <div class="bg-[#0f172a] border border-slate-800 w-full max-w-5xl rounded-3xl p-6 md:p-8 my-8 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-lg font-black text-white uppercase tracking-wider" id="modal-tenant-title">Configurar Escuela</h2>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Editar toda la información, Firewall, Geocerca y Mensajes</span>
+                </div>
+                <button onclick="closeModal('manageModal')" class="text-slate-500 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-blue-500/20">
+                    <h4 class="text-[10px] font-bold text-blue-400 uppercase mb-4 flex items-center gap-2"><i data-lucide="user" class="w-4 h-4"></i> Información del Director</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label><input type="text" id="edit-director-name" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-white"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Email Director</label><input type="email" id="edit-director-email" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-white"></div>
+                        <div class="space-y-1 md:col-span-2"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">UID Firebase</label><input type="text" id="edit-director-uid" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-white"></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase mb-4 flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4"></i> Información de la Escuela</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">ID Escuela</label><input type="text" id="edit-id" disabled class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl text-slate-400 text-sm font-mono cursor-not-allowed"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Institución</label><input type="text" id="edit-name" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                    </div>
+                    <div class="space-y-1 mt-4"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">🌐 URL del Sitio</label><div class="url-display"><span id="edit-url">https://prodigitalcr.github.io/TENANT-ESCUELA/?id=[id]</span><button type="button" class="copy-btn" onclick="copyEditUrl()">Copiar</button></div></div>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase mb-4 flex items-center gap-2"><i data-lucide="credit-card" class="w-4 h-4"></i> Plan y Contacto</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">WhatsApp</label><input type="text" id="edit-tel" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Plan</label><select id="edit-plan" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"><option value="Mensual">Mensual</option><option value="Trimestral">Trimestral (10% desc)</option><option value="Anual">Anual (20% desc)</option></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Cuota Mensual (₡)</label><input type="number" id="edit-monto" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                    </div>
+                    <div class="space-y-1 mt-4"><label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Próxima Fecha de Corte</label><input type="date" id="edit-corte" class="w-full bg-[#080d1a] border border-slate-800 p-3 rounded-xl outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 text-white"></div>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase mb-3 block">Estado de Suscripción</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer group"><input type="radio" name="m_status" value="activo" class="hidden peer"><div class="py-3 text-center rounded-xl border border-slate-800 bg-slate-900/50 peer-checked:bg-emerald-600/15 peer-checked:border-emerald-500 text-slate-500 peer-checked:text-emerald-400 font-bold text-xs uppercase transition-all">🟢 Activo</div></label>
+                        <label class="cursor-pointer group"><input type="radio" name="m_status" value="bloqueado" class="hidden peer"><div class="py-3 text-center rounded-xl border border-slate-800 bg-slate-900/50 peer-checked:bg-red-600/15 peer-checked:border-red-500 text-slate-500 peer-checked:text-red-400 font-bold text-xs uppercase transition-all">🔴 Bloqueado</div></label>
+                        <label class="cursor-pointer group"><input type="radio" name="m_status" value="mantenimiento" class="hidden peer"><div class="py-3 text-center rounded-xl border border-slate-800 bg-slate-900/50 peer-checked:bg-amber-600/15 peer-checked:border-amber-500 text-slate-500 peer-checked:text-amber-400 font-bold text-xs uppercase transition-all">🟡 Mantenimiento</div></label>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-cyan-500/20">
+                    <h4 class="text-[10px] font-bold text-cyan-400 uppercase mb-4 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i> Parámetros Geocerca</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="space-y-1 md:col-span-2"><label class="text-[9px] font-bold text-cyan-400 uppercase ml-1">Latitud</label><input type="number" step="any" id="edit-lat" class="w-full bg-[#080d1a] border border-slate-800 p-2 rounded-lg text-xs font-mono text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"></div>
+                        <div class="space-y-1"><label class="text-[9px] font-bold text-cyan-400 uppercase ml-1">Longitud</label><input type="number" step="any" id="edit-lng" class="w-full bg-[#080d1a] border border-slate-800 p-2 rounded-lg text-xs font-mono text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"></div>
+                        <div class="space-y-1"><label class="text-[9px] font-bold text-cyan-400 uppercase ml-1">Radio (m)</label><input type="number" id="edit-radio" class="w-full bg-[#080d1a] border border-slate-800 p-2 rounded-lg text-xs font-mono text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"></div>
+                    </div>
+                    <div class="flex-1 min-h-[240px] rounded-2xl border border-slate-800 overflow-hidden shadow-inner mt-4"><div id="map-editor" class="w-full h-full"></div></div>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-red-500/20">
+                    <div class="flex justify-between items-center mb-3"><label class="text-[10px] font-bold text-red-400 uppercase flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-4 h-4"></i> Mensaje Bloqueado (Mora/Suspensión)</label><label class="cursor-pointer text-[9px] bg-red-900/30 text-red-300 px-3 py-1.5 rounded-lg font-bold hover:bg-red-900/50 transition-all">📄 Importar <input type="file" accept=".html" onchange="processHTML(event, 'm_html_mora')" class="hidden"></label></div>
+                    <textarea id="m_html_mora" rows="3" placeholder="HTML de bloqueo por mora..." class="w-full bg-[#080d1a] border border-red-500/30 p-3 rounded-xl outline-none text-red-300 font-mono text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500/50"></textarea>
+                </div>
+
+                <div class="bg-slate-950/40 p-4 rounded-2xl border border-amber-500/20">
+                    <div class="flex justify-between items-center mb-3"><label class="text-[10px] font-bold text-amber-400 uppercase flex items-center gap-1.5"><i data-lucide="wrench" class="w-4 h-4"></i> Mensaje de Mantenimiento</label><label class="cursor-pointer text-[9px] bg-amber-900/30 text-amber-300 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-900/50 transition-all">📄 Importar <input type="file" accept=".html" onchange="processHTML(event, 'm_html_mant')" class="hidden"></label></div>
+                    <textarea id="m_html_mant" rows="3" placeholder="HTML de mantenimiento..." class="w-full bg-[#080d1a] border border-amber-500/30 p-3 rounded-xl outline-none text-amber-300 font-mono text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-4 pt-6 border-t border-slate-800/80 mt-6 sticky bottom-0 bg-[#0f172a]">
+                <button onclick="closeModal('manageModal')" class="flex-1 py-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-slate-400 uppercase text-xs tracking-wider transition-all">Cancelar</button>
+                <button onclick="saveChanges()" class="flex-[2] py-4 bg-cyan-600 hover:bg-cyan-500 rounded-xl font-black text-slate-950 uppercase text-xs tracking-wider shadow-lg shadow-cyan-500/10"><i data-lucide="save" class="w-4 h-4"></i> Guardar Todos los Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE & LEAFLET SCRIPTS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { getDatabase, ref, set, update, get, remove, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-3shuRaHP2LP2R39G9IUu7dBB-Dtan94",
+            authDomain: "tenant-escuela.firebaseapp.com",
+            databaseURL: "https://tenant-escuela-default-rtdb.firebaseio.com",
+            projectId: "tenant-escuela",
+            storageBucket: "tenant-escuela.firebasestorage.app",
+            messagingSenderId: "456023877565",
+            appId: "1:456023877565:web:f29a83b9c6f2ee374bd4d4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        let currentTenants = {}; let editingId = null;
+        let mapCreator = null, markerCreator = null, circleCreator = null;
+        let mapEditor = null, markerEditor = null, circleEditor = null;
+        let statusListeners = {};
+
+        window.refreshIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
+        window.showToast = (msg, type = 'success') => { const container = document.getElementById('toast-container'); const t = document.createElement('div'); t.className = `p-4 rounded-xl shadow-2xl font-black text-white text-[10px] uppercase tracking-wider ${type === 'success' ? 'bg-emerald-600' : 'bg-red-600'} animate-slide-up`; t.innerHTML = `<i data-lucide="${type === 'success' ? 'check' : 'alert-octagon'}" class="w-4 h-4 inline mr-2"></i> ${msg}`; container.appendChild(t); window.refreshIcons(); setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3500); };
+        window.openCustomConfirm = (title, message, onConfirm) => { const modal = document.getElementById('custom-confirm-modal'); document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-message').innerText = message; modal.classList.remove('hidden'); const cleanUp = () => { modal.classList.add('hidden'); document.getElementById('confirm-cancel-btn').onclick = null; document.getElementById('confirm-success-btn').onclick = null; }; document.getElementById('confirm-cancel-btn').onclick = () => cleanUp(); document.getElementById('confirm-success-btn').onclick = () => { onConfirm(); cleanUp(); }; };
+
+        window.checkAndAutoBlock = async (id, config) => {
+            if (!config.fechaCorte || config.bloqueado || config.estado === 'mantenimiento') return;
+            const hoy = new Date(); hoy.setHours(0, 0, 0, 0); 
+            const partesFecha = config.fechaCorte.split('-'); if (partesFecha.length !== 3) return;
+            const fechaCorte = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+            if (hoy > fechaCorte) {
+                try {
+                    await update(ref(database, `tenants/${id}`), { 'config/bloqueado': true, 'status': 'bloqueado' });
+                    await update(ref(database, `tenantDB/${id}`), { bloqueado: true, estado: 'bloqueado' });
+                    showToast(`🛑 Sistema auto-bloqueó a '${config.empresa || id}' por vencimiento de cuota`, 'error');
+                } catch (err) {}
             }
+        };
+
+        window.generateTenantUrl = () => { const id = (document.getElementById('new-id').value || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); const url = id ? `https://prodigitalcr.github.io/TENANT-ESCUELA/?id=${id}` : 'https://prodigitalcr.github.io/TENANT-ESCUELA/?id=[id-escuela]'; document.getElementById('generated-url').innerText = url; };
+        window.copyUrl = () => { navigator.clipboard.writeText(document.getElementById('generated-url').innerText).then(() => showToast("✅ URL copiada al portapapeles")); };
+        window.copyEditUrl = () => { navigator.clipboard.writeText(document.getElementById('edit-url').innerText).then(() => showToast("✅ URL copiada al portapapeles")); };
+
+        window.handleLogin = async (e) => { e.preventDefault(); const email = document.getElementById('email').value.trim(); const pass = document.getElementById('password').value; const errBox = document.getElementById('auth-error'); try { errBox.classList.add('hidden'); const userCredential = await signInWithEmailAndPassword(auth, email, pass); const user = userCredential.user; const snapshot = await get(ref(database, 'admin_metadata/super_admins/' + user.uid)); if (snapshot.exists() && snapshot.val() === true) { showToast("✅ SISTEMA AUTENTICADO CORRECTAMENTE"); } else { await signOut(auth); errBox.innerText = "❌ Acceso Denegado: No tienes permisos de Super Admin."; errBox.classList.remove('hidden'); } } catch (err) { errBox.innerText = "❌ Error: Verifica tu email y contraseña."; errBox.classList.remove('hidden'); } };
+        window.handleLogout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) { get(ref(database, 'admin_metadata/super_admins/' + user.uid)).then((snapshot) => { if (snapshot.exists() && snapshot.val() === true) { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); loadData(); initCreatorMap(); } else { signOut(auth); } }); } 
+            else { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); } window.refreshIcons();
+        });
+
+        function initCreatorMap() {
+            if (mapCreator) return; const lat = 9.9347, lng = -84.0875; document.getElementById('new-lat').value = lat; document.getElementById('new-lng').value = lng;
+            mapCreator = L.map('map-creator').setView([lat, lng], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapCreator);
+            markerCreator = L.marker([lat, lng], { draggable: true }).addTo(mapCreator); circleCreator = L.circle([lat, lng], { color: '#06b6d4', fillColor: '#06b6d4', fillOpacity: 0.15, radius: 150 }).addTo(mapCreator);
+            markerCreator.on('drag', function() { const pos = markerCreator.getLatLng(); document.getElementById('new-lat').value = pos.lat.toFixed(6); document.getElementById('new-lng').value = pos.lng.toFixed(6); circleCreator.setLatLng(pos); });
+            mapCreator.on('click', function(e) { const pos = e.latlng; markerCreator.setLatLng(pos); circleCreator.setLatLng(pos); document.getElementById('new-lat').value = pos.lat.toFixed(6); document.getElementById('new-lng').value = pos.lng.toFixed(6); });
+            document.getElementById('new-radio').addEventListener('input', function(e) { circleCreator.setRadius(parseInt(e.target.value) || 150); });
         }
 
-        function exportarPDFReporte() {
-            const { jsPDF } = window.jspdf; const doc = new jsPDF();
-            doc.text(document.getElementById('tituloReporte').innerText, 14, 20);
-            doc.autoTable({ html: '#tabla-logs-final', startY: 30, theme: 'grid' });
-            doc.save(`Reporte_Asistencia_${document.getElementById('reportDate').value}.pdf`);
+        window.createTenant = async () => {
+            const id = document.getElementById('new-id').value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); const name = document.getElementById('new-name').value.trim(); const directorName = document.getElementById('new-director-name').value.trim(); const directorEmail = document.getElementById('new-director-email').value.trim(); const directorUid = document.getElementById('new-director-uid').value.trim(); const tel = document.getElementById('new-tel').value.trim(); const plan = document.getElementById('new-plan').value; const monto = parseFloat(document.getElementById('new-monto').value) || 0; const lat = parseFloat(document.getElementById('new-lat').value) || 9.9347; const lng = parseFloat(document.getElementById('new-lng').value) || -84.0875; const radio = parseInt(document.getElementById('new-radio').value) || 150; const corte = document.getElementById('new-corte').value;
+            if (!id || !name || !corte || !directorName || !directorEmail || !directorUid) { showToast("Complete todos los campos requeridos.", "error"); return; }
+            try {
+                const config = { empresa: name, director: { nombre: directorName, email: directorEmail, uid: directorUid }, telefono: tel, tipoPlan: plan, montoContrato: monto, fechaCorte: corte, bloqueado: false, geocerca: { lat, lng, radio }, estado: 'activo', url: `https://prodigitalcr.github.io/TENANT-ESCUELA/?id=${id}`, htmlMora: '<div style="text-align:center;background:#dc2626;color:white;padding:60px;border-radius:12px;"><h1>⚠️ Suspendido por Mora</h1><p>Contacte a administración</p></div>', htmlMantenimiento: '<div style="text-align:center;background:#fbbf24;color:#78350f;padding:60px;border-radius:12px;"><h1>🔧 En Mantenimiento</h1><p>Volveremos en breve</p></div>' };
+                await set(ref(database, 'tenants/' + id + '/config'), config); await set(ref(database, 'tenants/' + id + '/status'), 'activo');
+                await set(ref(database, 'tenantDB/' + id), { bloqueado: false, estado: 'activo', htmlMora: config.htmlMora, htmlMantenimiento: config.htmlMantenimiento });
+                showToast(`✅ Escuela '${name}' desplegada exitosamente`);
+                document.getElementById('new-id').value = ""; document.getElementById('new-name').value = ""; document.getElementById('new-director-name').value = ""; document.getElementById('new-director-email').value = ""; document.getElementById('new-director-uid').value = ""; document.getElementById('new-tel').value = ""; document.getElementById('new-monto').value = "15000"; document.getElementById('new-corte').value = ""; document.getElementById('generated-url').innerText = 'https://prodigitalcr.github.io/TENANT-ESCUELA/?id=[id-escuela]';
+            } catch (err) { showToast("Error: " + err.message, "error"); }
+        };
+
+        function loadData() {
+            onValue(ref(database, 'tenants'), (snapshot) => {
+                const list = document.getElementById('tenant-list'); list.innerHTML = ""; currentTenants = {}; statusListeners = {};
+                if (!snapshot.exists()) { list.innerHTML = `<tr><td colspan="8" class="p-10 text-center text-slate-500 uppercase font-bold text-xs">No hay escuelas registradas</td></tr>`; updateStats(); return; }
+                snapshot.forEach((childSnapshot) => {
+                    const id = childSnapshot.key; const data = childSnapshot.val(); const config = data.config || {}; currentTenants[id] = { id, ...config };
+                    checkAndAutoBlock(id, config);
+                    statusListeners[id] = onValue(ref(database, `tenants/${id}/status`), (statusSnapshot) => { if (statusSnapshot.exists()) { const newStatus = statusSnapshot.val(); currentTenants[id].estado = newStatus; currentTenants[id].bloqueado = newStatus === 'bloqueado'; updateTenantRow(id); updateStats(); } });
+                    renderTenantRow(id, config);
+                });
+                updateStats(); window.refreshIcons();
+            });
         }
 
-        function mostrarAyuda(t) { 
-            alert("SISTEMA DE ASISTENCIA FACIAL CON GEOCERCA\n\n1. Asegúrate de estar dentro del rango geográfico configurado en la escuela.\n2. Presiona 'Iniciar Escáner'.\n3. Mire a la cámara para guardar la asistencia.\n4. El sistema emitirá una melodía de éxito y desactivará la cámara automáticamente para la siguiente persona."); 
+        function renderTenantRow(id, config) {
+            const list = document.getElementById('tenant-list'); const existingRow = document.querySelector(`tr[data-tenant-id="${id}"]`);
+            const isBlocked = config.bloqueado === true; let status = "🟢 Activo"; let statusClass = "status-active";
+            if (isBlocked) { status = "🔴 Bloqueado"; statusClass = "status-blocked"; } else if (config.estado === "mantenimiento") { status = "🟡 Mantenimiento"; statusClass = "status-maintenance"; }
+            const lat = config.geocerca?.lat || 0; const lng = config.geocerca?.lng || 0; const r = config.geocerca?.radio || 150; const tel = config.telefono || ''; const director = config.director || {};
+            let fechaVencida = false;
+            if (config.fechaCorte) { const hoy = new Date(); hoy.setHours(0, 0, 0, 0); const p = config.fechaCorte.split('-'); if (p.length === 3) { const fCorte = new Date(p[0], p[1] - 1, p[2]); if (hoy > fCorte) fechaVencida = true; } }
+            const dateColorClass = fechaVencida ? 'text-red-500 font-black' : 'text-slate-500';
+
+            const row = document.createElement('tr'); row.className = "hover:bg-slate-800/20 transition-all border-b border-slate-800/30 text-xs"; row.setAttribute('data-tenant-id', id);
+            row.innerHTML = `<td class="p-5"><div class="font-black text-cyan-400 uppercase">${config.empresa || id}</div><div class="text-[9px] text-slate-500 font-mono mt-1">${id}</div></td><td class="p-5"><div class="text-[10px] font-bold text-slate-300">${director.nombre || 'N/A'}</div><div class="text-[9px] text-slate-500">${director.email || 'N/A'}</div></td><td class="p-5"><div class="text-[10px] font-mono text-slate-300">Radio: ${r}m</div><div class="text-[9px] text-slate-500 font-mono">Lat: ${lat.toFixed(4)}</div><div class="text-[9px] text-slate-500 font-mono">Lng: ${lng.toFixed(4)}</div></td><td class="p-5"><div class="text-[10px] font-bold">${config.tipoPlan || 'Mensual'}</div><div class="text-[9px] ${dateColorClass}">Corte: ${config.fechaCorte || 'N/A'} ${fechaVencida ? '⚠️' : ''}</div></td><td class="p-5"><div class="text-indigo-300 font-mono font-black">₡${Number(config.montoContrato || 0).toLocaleString()}</div></td><td class="p-5 text-center status-cell-${id}"><span class="status-badge ${statusClass}">${status}</span></td><td class="p-5 text-center"><div class="flex justify-center gap-2"><button onclick="abrirSitio('${id}')" class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-all" title="Abrir sitio del cliente"><i data-lucide="globe" class="w-4 h-4"></i></button>${tel ? `<a href="https://wa.me/${tel.replace(/\D/g, '')}" target="_blank" class="p-2 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-all" title="Contactar por WhatsApp"><i data-lucide="message-circle" class="w-4 h-4"></i></a>` : ''}<button onclick="toggleBlockedState('${id}')" class="p-2 ${isBlocked ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'} transition-all rounded-lg" title="Bloquear/Desbloquear"><i data-lucide="${isBlocked ? 'lock-open' : 'lock'}" class="w-4 h-4"></i></button></div></td><td class="p-5 text-right"><div class="flex justify-end gap-2"><button onclick="openEdit('${id}')" class="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg hover:bg-cyan-500/20 transition-all" title="Editar"><i data-lucide="settings" class="w-4 h-4"></i></button><button onclick="deleteTenant('${id}')" class="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>`;
+            if (existingRow) { existingRow.replaceWith(row); } else { list.appendChild(row); }
         }
 
-        // Función para iniciar escaneo directo sin login
-        function iniciarEscaneoDirecto() {
-            mostrarVista('scan-view');
+        function updateTenantRow(id) {
+            const t = currentTenants[id]; if (!t) return; const statusCell = document.querySelector(`.status-cell-${id}`); if (!statusCell) return;
+            const isBlocked = t.bloqueado === true; let status = "🟢 Activo"; let statusClass = "status-active";
+            if (isBlocked) { status = "🔴 Bloqueado"; statusClass = "status-blocked"; } else if (t.estado === "mantenimiento") { status = "🟡 Mantenimiento"; statusClass = "status-maintenance"; }
+            statusCell.innerHTML = `<span class="status-badge ${statusClass}">${status}</span>`;
+            const row = document.querySelector(`tr[data-tenant-id="${id}"]`);
+            if (row) { const toggleBtn = row.querySelector(`button[onclick="toggleBlockedState('${id}')"]`); if (toggleBtn) { toggleBtn.className = `p-2 ${isBlocked ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'} transition-all rounded-lg`; const icon = toggleBtn.querySelector('i'); icon.setAttribute('data-lucide', isBlocked ? 'lock-open' : 'lock'); } }
+            window.refreshIcons();
         }
 
-        // Inicializar vista por defecto en pantalla inactiva
-        mostrarVista('home-view');
-        resetIdleTimer();
+        window.abrirSitio = (id) => { const t = currentTenants[id]; if (!t) { showToast("Error: No se encontró la escuela.", "error"); return; } const siteUrl = t.url || `https://prodigitalcr.github.io/TENANT-ESCUELA/?id=${id}`; window.open(siteUrl, '_blank'); showToast(`📱 Abriendo sitio de ${t.empresa || id}`); };
+
+        window.toggleBlockedState = async (id) => {
+            const t = currentTenants[id]; const newState = !t.bloqueado; const action = newState ? 'Bloquear' : 'Desbloquear';
+            openCustomConfirm(action + " Escuela", `¿${action} la escuela '${t.empresa}'? Los usuarios verán una pantalla de ${newState ? 'error' : 'bienvenida'}.`, async () => {
+                try {
+                    await update(ref(database, `tenants/${id}`), { 'config/bloqueado': newState, 'status': newState ? 'bloqueado' : 'activo' });
+                    await update(ref(database, `tenantDB/${id}`), { bloqueado: newState, estado: newState ? 'bloqueado' : 'activo' });
+                    showToast(`✅ Escuela ${action.toLowerCase()}a con éxito`);
+                } catch (err) { showToast("Error: " + err.message, "error"); }
+            });
+        };
+
+        window.openEdit = (id) => {
+            editingId = id; const t = currentTenants[id]; if (!t) return;
+            document.getElementById('modal-tenant-title').innerText = `${t.empresa || id}`;
+            const director = t.director || {}; document.getElementById('edit-director-name').value = director.nombre || ''; document.getElementById('edit-director-email').value = director.email || ''; document.getElementById('edit-director-uid').value = director.uid || '';
+            document.getElementById('edit-id').value = id; document.getElementById('edit-name').value = t.empresa || ''; document.getElementById('edit-url').innerText = t.url || `https://prodigitalcr.github.io/TENANT-ESCUELA/?id=${id}`; document.getElementById('edit-tel').value = t.telefono || ''; document.getElementById('edit-plan').value = t.tipoPlan || 'Mensual'; document.getElementById('edit-monto').value = t.montoContrato || ''; document.getElementById('edit-corte').value = t.fechaCorte || '';
+            const status = t.bloqueado ? 'bloqueado' : (t.estado || 'activo'); document.querySelector(`input[name="m_status"][value="${status}"]`).checked = true;
+            document.getElementById('m_html_mora').value = t.htmlMora || ''; document.getElementById('m_html_mant').value = t.htmlMantenimiento || '';
+            const lat = t.geocerca?.lat || 9.9347; const lng = t.geocerca?.lng || -84.0875; const r = t.geocerca?.radio || 150;
+            document.getElementById('edit-lat').value = lat; document.getElementById('edit-lng').value = lng; document.getElementById('edit-radio').value = r;
+            document.getElementById('manageModal').classList.remove('hidden');
+            setTimeout(() => {
+                if (mapEditor) { mapEditor.remove(); mapEditor = null; markerEditor = null; circleEditor = null; }
+                mapEditor = L.map('map-editor').setView([lat, lng], 14); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapEditor);
+                markerEditor = L.marker([lat, lng], { draggable: true }).addTo(mapEditor); circleEditor = L.circle([lat, lng], { color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.15, radius: r }).addTo(mapEditor);
+                markerEditor.on('drag', function() { const pos = markerEditor.getLatLng(); document.getElementById('edit-lat').value = pos.lat.toFixed(6); document.getElementById('edit-lng').value = pos.lng.toFixed(6); circleEditor.setLatLng(pos); });
+                mapEditor.on('click', function(ev) { const pos = ev.latlng; markerEditor.setLatLng(pos); circleEditor.setLatLng(pos); document.getElementById('edit-lat').value = pos.lat.toFixed(6); document.getElementById('edit-lng').value = pos.lng.toFixed(6); });
+                document.getElementById('edit-radio').addEventListener('input', function(ev) { circleEditor.setRadius(parseInt(ev.target.value) || 150); });
+            }, 300); window.refreshIcons();
+        };
+
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        window.saveChanges = async () => {
+            const directorName = document.getElementById('edit-director-name').value.trim(); const directorEmail = document.getElementById('edit-director-email').value.trim(); const directorUid = document.getElementById('edit-director-uid').value.trim(); const name = document.getElementById('edit-name').value.trim(); const tel = document.getElementById('edit-tel').value.trim(); const plan = document.getElementById('edit-plan').value; const monto = parseFloat(document.getElementById('edit-monto').value) || 0; const corte = document.getElementById('edit-corte').value; const status = document.querySelector('input[name="m_status"]:checked').value; const hMora = document.getElementById('m_html_mora').value; const hMant = document.getElementById('m_html_mant').value; const lat = parseFloat(document.getElementById('edit-lat').value) || 9.9347; const lng = parseFloat(document.getElementById('edit-lng').value) || -84.0875; const radio = parseInt(document.getElementById('edit-radio').value) || 150;
+            const bloqueado = status === 'bloqueado';
+            try {
+                const updates = {};
+                updates[`tenants/${editingId}/config/director`] = { nombre: directorName, email: directorEmail, uid: directorUid }; updates[`tenants/${editingId}/config/empresa`] = name; updates[`tenants/${editingId}/config/telefono`] = tel; updates[`tenants/${editingId}/config/tipoPlan`] = plan; updates[`tenants/${editingId}/config/montoContrato`] = monto; updates[`tenants/${editingId}/config/fechaCorte`] = corte; updates[`tenants/${editingId}/config/bloqueado`] = bloqueado; updates[`tenants/${editingId}/config/estado`] = status; updates[`tenants/${editingId}/config/htmlMora`] = hMora; updates[`tenants/${editingId}/config/htmlMantenimiento`] = hMant; updates[`tenants/${editingId}/config/geocerca`] = { lat, lng, radio }; updates[`tenants/${editingId}/status`] = status;
+                updates[`tenantDB/${editingId}/bloqueado`] = bloqueado; updates[`tenantDB/${editingId}/estado`] = status; updates[`tenantDB/${editingId}/htmlMora`] = hMora; updates[`tenantDB/${editingId}/htmlMantenimiento`] = hMant;
+                await update(ref(database), updates); showToast("✅ Todos los cambios guardados y sincronizados a la URL del cliente"); closeModal('manageModal');
+            } catch (err) { showToast("Error: " + err.message, "error"); }
+        };
+
+        window.deleteTenant = async (id) => {
+            const t = currentTenants[id];
+            openCustomConfirm("Eliminar Escuela", `¿Eliminar permanentemente '${t.empresa}'? Se borrarán todos los datos, usuarios y registros.`, async () => {
+                try {
+                    await remove(ref(database, 'tenants/' + id));
+                    await remove(ref(database, 'tenantDB/' + id));
+                    // 🔴 AISLAMIENTO COMPLETADO: Al borrar tenant, borramos su partición de datos operativos
+                    await remove(ref(database, 'escuelas_data/' + id));
+                    
+                    showToast(`✅ Escuela eliminada completamente`);
+                } catch (err) { showToast("Error: " + err.message, "error"); }
+            });
+        };
+
+        function updateStats() { let total = 0, active = 0, blocked = 0, revenue = 0; Object.values(currentTenants).forEach(t => { total++; if (t.bloqueado) blocked++; else active++; revenue += parseFloat(t.montoContrato || 0); }); document.getElementById('stat-total').innerText = total; document.getElementById('stat-active').innerText = active; document.getElementById('stat-blocked').innerText = blocked; document.getElementById('stat-revenue').innerText = '₡' + revenue.toLocaleString(); }
+        window.processHTML = (event, targetId) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { document.getElementById(targetId).value = e.target.result; }; reader.readAsText(file); };
     </script>
 </body>
 </html>
